@@ -19,14 +19,25 @@ def get_or_create_profile(f):
 
 
 def get_main_keyboard():
-    keyboard = [[InlineKeyboardButton('Открыть коробку 🎉', callback_data='open'),
-                 InlineKeyboardButton('🎁 Призы 🎁', callback_data='about')],
-                [InlineKeyboardButton('Как открыть коробку ⁉', callback_data='how_open')]]
+    keyboard = [[InlineKeyboardButton('Открыть коробку  🎉', callback_data='open'),
+                 InlineKeyboardButton('🎁  Призы  🎁', callback_data='about')],
+                [InlineKeyboardButton('Как открыть коробку  ⁉', callback_data='how_open')],
+                [InlineKeyboardButton('💳  Пополнить баланс  💳', callback_data='payment')]]
     return InlineKeyboardMarkup(keyboard)
 
 
 def get_back_keyboard():
     keyboard = [[InlineKeyboardButton('🔙 Назад 🔙', callback_data='back')]]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_payment_keyboard():
+    keyboard = [[InlineKeyboardButton('100₽', callback_data='100'),
+                 InlineKeyboardButton('250₽', callback_data='250'),
+                 InlineKeyboardButton('500₽', callback_data='500')],
+                [InlineKeyboardButton('1000₽', callback_data='1000'),
+                 InlineKeyboardButton('1500₽', callback_data='1500'),
+                 InlineKeyboardButton('2000₽', callback_data='2000')]]
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -36,29 +47,41 @@ def do_start(update: Update, context: CallbackContext, user):
     update.message.reply_text(text=f'Привет, {user.name}!', reply_markup=reply_markup)
 
 
-def receive_payment(update: Update, context: CallbackContext):
-    chat_id = update.message.chat_id
-
-    p, _ = Profile.objects.get_or_create(external_id=chat_id, defaults={'name': update.message.from_user.username})
-
-    payment = Payment(profile=p, value=250)
-    payment.save()
-
-    p.balance += payment.value
-    p.save()
-
-    reply_text = 'Ваш ID: {}\n\nРазмер платежа: {}'.format(chat_id, payment.value)
-    update.message.reply_text(text=reply_text)
-
-
 def keyboard_callback_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     data = query.data
 
+    user = Profile.objects.get(external_id=query.message.chat_id)
+
     if data == 'how_open':
         query.message.edit_text(text=HOW_OPEN_TEXT, reply_markup=get_back_keyboard())
+    elif data == 'about':
+        query.message.edit_text(text=ABOUT_TEXT, reply_markup=get_back_keyboard())
+    elif data == 'payment':
+        query.message.edit_text(
+            text=f'Ваш баланс: {user.balance}\nНа какую сумму пополнение?',
+            reply_markup=get_payment_keyboard()
+        )
     elif data == 'back':
         query.message.edit_text(text='Что вы хотите сделать?', reply_markup=get_main_keyboard())
+    elif data.isdigit():
+        payment = Payment(profile=user, value=float(query.data))
+        user.balance += payment.value
+        payment.save()
+        user.save()
+        query.message.edit_text(
+            text=f'Вы пополнили баланс на {query.data}₽\nВаш баланс: {user.balance}₽',
+            reply_markup=get_back_keyboard())
+
+
+def payment_callback_handler(update: Update, context: CallbackContext):
+    query = update.callback_query
+
+    if query.data.isdigit():
+        user = Profile.objects.get(external_id=query.message.chat_id)
+
+        user.balance += float(query.data)
+        user.save()
 
 
 class Command(BaseCommand):
@@ -75,12 +98,6 @@ class Command(BaseCommand):
 
         buttons_handler = CallbackQueryHandler(callback=keyboard_callback_handler, pass_chat_data=False)
         updater.dispatcher.add_handler(buttons_handler)
-
-        # message_handler = MessageHandler(Filters.text, receive_payment)
-        # updater.dispatcher.add_handler(message_handler)
-
-        message_handler2 = CommandHandler('payment', receive_payment)
-        updater.dispatcher.add_handler(message_handler2)
 
         updater.start_polling()
         updater.idle()
