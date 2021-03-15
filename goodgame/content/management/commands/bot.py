@@ -9,6 +9,9 @@ from telegram.utils.request import Request
 
 from content.models import Profile, Payment
 
+import datetime
+from django.utils.timezone import utc
+
 
 def get_or_create_profile(f):
     def inner(update: Update, context: CallbackContext):
@@ -47,16 +50,34 @@ def do_start(update: Update, context: CallbackContext, user):
     update.message.reply_text(text=f'Привет, {user.name}!', reply_markup=reply_markup)
 
 
+def get_payments_last(user):
+    now_time = datetime.datetime.now().replace(tzinfo=utc)
+    last_lime = now_time - datetime.timedelta(minutes=1)
+    recently = Payment.objects.filter(profile=user, created_at__gte=last_lime)
+
+    pay_sum = 0
+    if recently:
+        for payment in recently:
+            pay_sum += payment.value
+
+    return pay_sum
+
+
 def keyboard_callback_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     data = query.data
 
     user = Profile.objects.get(external_id=query.message.chat_id)
 
-    if data == 'how_open':
-        query.message.edit_text(text=HOW_OPEN_TEXT, reply_markup=get_back_keyboard())
+    if data == 'open':
+        pay_sum = get_payments_last(user)
+        query.message.edit_text(
+            text=f'За последние 24 часа {pay_sum}₽',
+            reply_markup=get_back_keyboard())
     elif data == 'about':
         query.message.edit_text(text=ABOUT_TEXT, reply_markup=get_back_keyboard())
+    elif data == 'how_open':
+        query.message.edit_text(text=HOW_OPEN_TEXT, reply_markup=get_back_keyboard())
     elif data == 'payment':
         query.message.edit_text(
             text=f'Ваш баланс: {user.balance}\nНа какую сумму пополнение?',
@@ -110,24 +131,25 @@ HOW_OPEN_TEXT = '''Всего три простых шага!\n
 Все призы можно получить у администратора.\n
 Подробнее о всех призах в разделе "🎁 Призы 🎁"'''
 
-ABOUT_TEXT = '''Призы из Кейсов можно забрать сразу у администратора. Для этого необходимо подойти к администратору и
-открыв вкладку “Мои подарки” показать список призов, которые у тебя сейчас есть.
+ABOUT_TEXT = '''Призы из Кейсов можно забрать сразу у администратора.
+Для этого необходимо подойти к администратору и открыв вкладку
+"Мои подарки” показать список призов, которые у тебя сейчас есть.\n
 
-Базовый Кейс (250 рублей); 
+Базовый Кейс (250 рублей);
 1 час игры за пк;
-Полчаса игры за PS; 
-Полчаса игры за ПК; 
+Полчаса игры за PS;
+Полчаса игры за ПК;\n
 
-Кейс для бояр (500 рублей); 
+Кейс для бояр (500 рублей);
 Батончик;
 1.5 часа за PC;
 Кола (0.5);
-Пакет в зал Стандарт (ночной);
+Пакет в зал Стандарт (ночной); \n
 
-Кейс для Вельмож (1000 рублей); 
+Кейс для Вельмож (1000 рублей);
 Пакет в зал VIP (утренний);
-Кола и батончик; 
-3 часа за PS
+Кола и батончик;
+3 часа за PS;\n
 
 Кейс для Меценатов (2000 рублей); 
 Абонемент на посещение клуба (на все выходные);
