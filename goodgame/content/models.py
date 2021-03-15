@@ -5,6 +5,7 @@ class Profile(models.Model):
     external_id = models.PositiveIntegerField(verbose_name='внешний ID', unique=True)
     name = models.TextField(verbose_name='имя пользователя')
     balance = models.FloatField(default=0, verbose_name='баланс')
+    open_today = models.PositiveIntegerField(default=0, verbose_name='открыл сегодня')
     date_joined = models.DateTimeField(auto_now_add=True, verbose_name='дата регистрации')
 
     def __str__(self):
