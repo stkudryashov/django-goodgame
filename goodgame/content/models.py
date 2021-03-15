@@ -5,6 +5,7 @@ class Profile(models.Model):
     external_id = models.PositiveIntegerField(verbose_name='внешний ID', unique=True)
     name = models.TextField(verbose_name='имя пользователя')
     balance = models.FloatField(default=0, verbose_name='баланс')
+    date_joined = models.DateTimeField(auto_now_add=True, verbose_name='дата регистрации')
 
     def __str__(self):
         return f'{self.external_id}-{self.name}'
@@ -20,7 +21,7 @@ class Payment(models.Model):
     value = models.FloatField(verbose_name='размер платежа')
 
     def __str__(self):
-        return f'{self.pk}-{self.value}руб-{self.profile.name}'
+        return f'pm-{self.pk}-id-{self.profile.external_id}-val-{self.value}'
 
     class Meta:
         verbose_name = 'платеж'
