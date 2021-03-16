@@ -27,3 +27,17 @@ class Payment(models.Model):
     class Meta:
         verbose_name = 'платеж'
         verbose_name_plural = 'платежи'
+
+
+class Reward(models.Model):
+    profile = models.ForeignKey(Profile, verbose_name='владелец', on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='время получения')
+    text = models.CharField(max_length=100, verbose_name='награда')
+    is_received = models.BooleanField(default=False, verbose_name='получил')
+
+    def __str__(self):
+        return f'pm-{self.pk}-id-{self.profile.external_id}'
+
+    class Meta:
+        verbose_name = 'награда'
+        verbose_name_plural = 'награды'

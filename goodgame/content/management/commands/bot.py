@@ -8,7 +8,7 @@ from telegram.ext import Updater, CommandHandler
 from telegram.ext import CallbackContext, CallbackQueryHandler
 
 from telegram.utils.request import Request
-from content.models import Profile, Payment
+from content.models import Profile, Payment, Reward
 
 from .messages import *
 
@@ -30,6 +30,7 @@ def get_main_keyboard():
     keyboard = [[InlineKeyboardButton('Открыть коробку  🎉', callback_data='open'),
                  InlineKeyboardButton('🎁  Призы  🎁', callback_data='about')],
                 [InlineKeyboardButton('Как открыть коробку  ⁉', callback_data='how_open')],
+                [InlineKeyboardButton('🥳  Мои подарки  🥳', callback_data='my_rewards')],
                 [InlineKeyboardButton('💳  Пополнить баланс  💳', callback_data='payment')]]
     return InlineKeyboardMarkup(keyboard)
 
@@ -40,12 +41,12 @@ def get_back_keyboard():
 
 
 def get_payment_keyboard():
-    keyboard = [[InlineKeyboardButton('100₽', callback_data='100'),
-                 InlineKeyboardButton('250₽', callback_data='250'),
-                 InlineKeyboardButton('500₽', callback_data='500')],
-                [InlineKeyboardButton('1000₽', callback_data='1000'),
-                 InlineKeyboardButton('1500₽', callback_data='1500'),
-                 InlineKeyboardButton('2000₽', callback_data='2000')]]
+    keyboard = [[InlineKeyboardButton('100₽', callback_data='m100'),
+                 InlineKeyboardButton('250₽', callback_data='m250'),
+                 InlineKeyboardButton('500₽', callback_data='m500')],
+                [InlineKeyboardButton('1000₽', callback_data='m1000'),
+                 InlineKeyboardButton('1500₽', callback_data='m1500'),
+                 InlineKeyboardButton('2000₽', callback_data='m2000')]]
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -101,40 +102,32 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
     if data[0].isdigit():
         count = data[0]
         data = data[1:]
+        query.message.edit_text(
+            text=f'Поздравляем! Вы выиграли:')
         if data == 'box250':
-            query.message.edit_text(
-                text=f'Поздравляем! Вы выиграли:')
             for i in range(int(count)):
                 loot = choice(box_250)
+                Reward(profile=user, text=loot).save()
                 query.message.reply_text(text=loot)
-            user.open_day = today.day
-            user.save()
         elif data == 'box500':
-            query.message.edit_text(
-                text=f'Поздравляем! Вы выиграли:')
             for i in range(int(count)):
                 loot = choice(box_500)
+                Reward(profile=user, text=loot).save()
                 query.message.reply_text(text=loot)
-            user.open_day = today.day
-            user.save()
         elif data == 'box1000':
-            query.message.edit_text(
-                text=f'Поздравляем! Вы выиграли:')
             for i in range(int(count)):
                 loot = choice(box_1000)
+                Reward(profile=user, text=loot).save()
                 query.message.reply_text(text=loot)
-            user.open_day = today.day
-            user.save()
         elif data == 'box2000':
-            query.message.edit_text(
-                text=f'Поздравляем! Вы выиграли:')
             for i in range(int(count)):
                 loot = choice(box_2000)
+                Reward(profile=user, text=loot).save()
                 query.message.reply_text(text=loot)
-            user.open_day = today.day
-            user.save()
-
-    if data == 'open':
+        user.open_day = today.day
+        user.save()
+        query.message.reply_text(text='Назад на главную', reply_markup=get_back_keyboard())
+    elif data == 'open':
         if user.open_day != today.day:
             pay_sum = get_payments_last(user)
             if pay_sum < 250:
@@ -170,27 +163,38 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
             text=f'Ваш баланс: {user.balance}\nНа какую сумму пополнение?',
             reply_markup=get_payment_keyboard()
         )
+    elif data == 'my_rewards':
+        keyboard = []
+        rewards = user.reward_set.filter(is_received=False)
+        if rewards:
+            for reward in rewards:
+                keyboard.append([InlineKeyboardButton(reward.text, callback_data='re' + str(reward.pk))])
+            keyboard.append([InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')])
+            query.message.edit_text(text='Открвай награды только при администраторе!\n\n'
+                                         'Ваши доступные награды:', reply_markup=InlineKeyboardMarkup(keyboard))
+        else:
+            query.message.edit_text(text='У вас пока нет наград  😢', reply_markup=get_back_keyboard())
     elif data == 'back':
         query.message.edit_text(text='Что вы хотите сделать?', reply_markup=get_main_keyboard())
-    elif data.isdigit():
-        payment = Payment(profile=user, value=float(query.data))
+    elif data[0] == 'm':
+        data = data[1:]
+        payment = Payment(profile=user, value=float(data))
         user.balance += payment.value
         payment.save()
         user.save()
         query.message.edit_text(
-            text=f'Вы пополнили баланс на {query.data}₽\nВаш баланс: {user.balance}₽',
+            text=f'Вы пополнили баланс на {data}₽\nВаш баланс: {user.balance}₽',
             reply_markup=get_back_keyboard()
         )
-
-
-def payment_callback_handler(update: Update, context: CallbackContext):
-    query = update.callback_query
-
-    if query.data.isdigit():
-        user = Profile.objects.get(external_id=query.message.chat_id)
-
-        user.balance += float(query.data)
-        user.save()
+    elif data[0:2] == 're':
+        del_pk = data[2:]
+        reward = Reward.objects.get(pk=int(del_pk))
+        reward.is_received = True
+        reward.save()
+        query.edit_message_text(
+            text=f'Вы получили свой подарок:\n\n✨  {reward.text}  ✨',
+            reply_markup=get_back_keyboard()
+        )
 
 
 class Command(BaseCommand):
