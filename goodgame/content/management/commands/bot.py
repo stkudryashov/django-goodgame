@@ -17,6 +17,7 @@ from django.utils.timezone import utc
 
 from random import choice
 
+
 def get_or_create_profile(f):
     def inner(update: Update, context: CallbackContext):
         chat_id = update.message.chat_id
@@ -95,6 +96,7 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
     data = query.data
 
     user = Profile.objects.get(external_id=query.message.chat_id)
+    today = datetime.datetime.today()
 
     if data[0].isdigit():
         count = data[0]
@@ -105,27 +107,35 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
             for i in range(int(count)):
                 loot = choice(box_250)
                 query.message.reply_text(text=loot)
+            user.open_day = today.day
+            user.save()
         elif data == 'box500':
             query.message.edit_text(
                 text=f'Поздравляем! Вы выиграли:')
             for i in range(int(count)):
                 loot = choice(box_500)
                 query.message.reply_text(text=loot)
+            user.open_day = today.day
+            user.save()
         elif data == 'box1000':
             query.message.edit_text(
                 text=f'Поздравляем! Вы выиграли:')
             for i in range(int(count)):
                 loot = choice(box_1000)
                 query.message.reply_text(text=loot)
+            user.open_day = today.day
+            user.save()
         elif data == 'box2000':
             query.message.edit_text(
                 text=f'Поздравляем! Вы выиграли:')
             for i in range(int(count)):
                 loot = choice(box_2000)
                 query.message.reply_text(text=loot)
+            user.open_day = today.day
+            user.save()
 
     if data == 'open':
-        if user.open_today <= 3:
+        if user.open_day != today.day:
             pay_sum = get_payments_last(user)
             if pay_sum < 250:
                 query.message.edit_text(
@@ -149,7 +159,7 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
                     reply_markup=get_loot_box_keyboard(2000))
         else:
             query.message.edit_text(
-                text='Ты уже открыл за сегодня три кейса\n\nВозвращайся завтра  😴',
+                text='Ты уже получил сегодня подарки\n\nВозвращайся завтра  😴',
                 reply_markup=get_back_keyboard())
     elif data == 'about':
         query.message.edit_text(text=ABOUT_TEXT, reply_markup=get_back_keyboard())
