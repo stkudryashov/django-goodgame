@@ -15,6 +15,7 @@ from .messages import *
 import datetime
 from django.utils.timezone import utc
 
+from random import choice
 
 def get_or_create_profile(f):
     def inner(update: Update, context: CallbackContext):
@@ -49,14 +50,23 @@ def get_payment_keyboard():
 
 def get_loot_box_keyboard(value):
     if value == 250:
-        keyboard = [[InlineKeyboardButton('Кейс за 250', callback_data='box250')],
+        keyboard = [[InlineKeyboardButton('💎  Кейс за 250  💎', callback_data='1box250')],
                     [InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')]]
     elif value == 500:
-        pass
+        keyboard = [[InlineKeyboardButton('💎  2 Кейса за 250  💎', callback_data='2box250')],
+                    [InlineKeyboardButton('💎  Кейс за 500  💎', callback_data='1box250')],
+                    [InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')]]
     elif value == 1000:
-        pass
+        keyboard = [[InlineKeyboardButton('💎  3 Кейса за 250  💎', callback_data='3box250')],
+                    [InlineKeyboardButton('💎  2 Кейса за 500  💎', callback_data='2box250')],
+                    [InlineKeyboardButton('💎  Кейс за 1000  💎', callback_data='1box250')],
+                    [InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')]]
     elif value == 2000:
-        pass
+        keyboard = [[InlineKeyboardButton('💎  3 Кейса за 250  💎', callback_data='3box250')],
+                    [InlineKeyboardButton('💎  3 Кейса за 500  💎', callback_data='3box250')],
+                    [InlineKeyboardButton('💎  2 Кейса за 1000  💎', callback_data='2box250')],
+                    [InlineKeyboardButton('💎  Кейс за 2000  💎', callback_data='1box250')],
+                    [InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')]]
 
     return InlineKeyboardMarkup(keyboard)
 
@@ -85,6 +95,34 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
     data = query.data
 
     user = Profile.objects.get(external_id=query.message.chat_id)
+
+    if data[0].isdigit():
+        count = data[0]
+        data = data[1:]
+        if data == 'box250':
+            query.message.edit_text(
+                text=f'Поздравляем! Вы выиграли:')
+            for i in range(int(count)):
+                loot = choice(box_250)
+                query.message.reply_text(text=loot)
+        elif data == 'box500':
+            query.message.edit_text(
+                text=f'Поздравляем! Вы выиграли:')
+            for i in range(int(count)):
+                loot = choice(box_500)
+                query.message.reply_text(text=loot)
+        elif data == 'box1000':
+            query.message.edit_text(
+                text=f'Поздравляем! Вы выиграли:')
+            for i in range(int(count)):
+                loot = choice(box_1000)
+                query.message.reply_text(text=loot)
+        elif data == 'box2000':
+            query.message.edit_text(
+                text=f'Поздравляем! Вы выиграли:')
+            for i in range(int(count)):
+                loot = choice(box_2000)
+                query.message.reply_text(text=loot)
 
     if data == 'open':
         if user.open_today <= 3:
@@ -131,7 +169,8 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
         user.save()
         query.message.edit_text(
             text=f'Вы пополнили баланс на {query.data}₽\nВаш баланс: {user.balance}₽',
-            reply_markup=get_back_keyboard())
+            reply_markup=get_back_keyboard()
+        )
 
 
 def payment_callback_handler(update: Update, context: CallbackContext):
