@@ -170,7 +170,7 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
             for reward in rewards:
                 keyboard.append([InlineKeyboardButton(reward.text, callback_data='re' + str(reward.pk))])
             keyboard.append([InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')])
-            query.message.edit_text(text='Открвай награды только при администраторе!\n\n'
+            query.message.edit_text(text='Открывай награды только при администраторе!\n\n'
                                          'Ваши доступные награды:', reply_markup=InlineKeyboardMarkup(keyboard))
         else:
             query.message.edit_text(text='У вас пока нет наград  😢', reply_markup=get_back_keyboard())
