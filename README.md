@@ -14,3 +14,5 @@ Telegram bot for a test task
 `PROXY_URL = 'https://telegg.ru/orig/bot'`
 
 ****
+
+4. `python manage.py migrate`
