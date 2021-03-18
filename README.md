@@ -1,5 +1,5 @@
 # django-goodgame
-Telegram bot for a test task
+**Telegram bot for a test task**
 
 ****
 
