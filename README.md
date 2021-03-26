@@ -11,7 +11,7 @@
 
 `TOKEN = 'your telegram token'`
 
-`PROXY_URL = 'https://telegg.ru/orig/bot'`
+`PROXY_URL = 'https://api.telegram.org/bot'`
 
 ****
 

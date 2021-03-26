@@ -8,20 +8,20 @@ from telegram.ext import Updater, CommandHandler
 from telegram.ext import CallbackContext, CallbackQueryHandler
 
 from telegram.utils.request import Request
-from content.models import Profile, Payment, Reward
-
-from .messages import *
-
-import datetime
-from django.utils.timezone import utc
+from content.models import Payment, Reward, ClubInfo, FullInfoUser, CaseBody, Mainlog
 
 from random import choice
+
+import datetime
 
 
 def get_or_create_profile(f):
     def inner(update: Update, context: CallbackContext):
         chat_id = update.message.chat_id
-        p, _ = Profile.objects.get_or_create(external_id=chat_id, defaults={'name': update.message.from_user.username})
+        p, _ = FullInfoUser.objects.get_or_create(telegram_id=chat_id,
+                                                  user_id=chat_id,
+                                                  user_club='goodgame1',
+                                                  defaults={'nickname': update.message.from_user.name})
         f(update, context, p)
     return inner
 
@@ -73,21 +73,21 @@ def get_loot_box_keyboard(value):
     return InlineKeyboardMarkup(keyboard)
 
 
-@get_or_create_profile
-def do_start(update: Update, context: CallbackContext, user):
-    reply_markup = get_main_keyboard()
-    update.message.reply_text(text=f'Привет, {user.name}!', reply_markup=reply_markup)
+# @get_or_create_profile
+# def do_start(update: Update, context: CallbackContext, user):
+#     reply_markup = get_main_keyboard()
+#     update.message.reply_text(text=f'Привет, {user.name}!', reply_markup=reply_markup)
 
 
 def get_payments_last(user):
-    now_time = datetime.datetime.now().replace(tzinfo=utc)
+    now_time = datetime.datetime.now()
     last_lime = now_time - datetime.timedelta(minutes=1)
-    recently = Payment.objects.filter(profile=user, created_at__gte=last_lime)
+    recently = Mainlog.objects.filter(clientid=user.user_id, recorddtime__gte=last_lime)
 
     pay_sum = 0
     if recently:
         for payment in recently:
-            pay_sum += payment.value
+            pay_sum += payment.cashadd
 
     return pay_sum
 
@@ -96,7 +96,7 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     data = query.data
 
-    user = Profile.objects.get(external_id=query.message.chat_id)
+    user = FullInfoUser.objects.get(telegram_id=query.message.chat_id)
     today = datetime.datetime.today()
 
     if data[0].isdigit():
@@ -128,7 +128,7 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
         user.save()
         query.message.reply_text(text='Назад на главную', reply_markup=get_back_keyboard())
     elif data == 'open':
-        if user.open_day != today.day:
+        if True: # user.open_day != today.day
             pay_sum = get_payments_last(user)
             if pay_sum < 250:
                 query.message.edit_text(
@@ -155,12 +155,14 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
                 text='Ты уже получил сегодня подарки\n\nВозвращайся завтра  😴',
                 reply_markup=get_back_keyboard())
     elif data == 'about':
-        query.message.edit_text(text=ABOUT_TEXT, reply_markup=get_back_keyboard())
+        about_text = CaseBody.objects.get(club=user.user_club).about_text
+        query.message.edit_text(text=about_text, reply_markup=get_back_keyboard())
     elif data == 'how_open':
-        query.message.edit_text(text=HOW_OPEN_TEXT, reply_markup=get_back_keyboard())
+        how_open = CaseBody.objects.get(club=user.user_club).how_open
+        query.message.edit_text(text=how_open, reply_markup=get_back_keyboard())
     elif data == 'payment':
         query.message.edit_text(
-            text=f'Ваш баланс: {user.balance}\nНа какую сумму пополнение?',
+            text=f'На какую сумму пополнение?',
             reply_markup=get_payment_keyboard()
         )
     elif data == 'my_rewards':
@@ -178,12 +180,10 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
         query.message.edit_text(text='Что вы хотите сделать?', reply_markup=get_main_keyboard())
     elif data[0] == 'm':
         data = data[1:]
-        payment = Payment(profile=user, value=float(data))
-        user.balance += payment.value
-        payment.save()
-        user.save()
+        mainlog = Mainlog(cashadd=float(data), clientid=user.user_id)
+        mainlog.save()
         query.message.edit_text(
-            text=f'Вы пополнили баланс на {data}₽\nВаш баланс: {user.balance}₽',
+            text=f'Вы пополнили баланс на {data}₽',
             reply_markup=get_back_keyboard()
         )
     elif data[0:2] == 're':
@@ -197,6 +197,30 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
         )
 
 
+@get_or_create_profile
+def case_messages(update: Update, context: CallbackContext, user):
+    club = ClubInfo.objects.get(id_name=user.user_club)
+
+    # bot = telepot.Bot(club.telegram_token)
+
+    if CaseBody.objects.filter(club=club.id_name, date_start__lte=datetime.datetime.now(),
+                               date_end__gte=datetime.datetime.now()).count() == 1:
+
+        case_body = CaseBody.objects.get(club=club.id_name, date_start__lte=datetime.datetime.now(),
+                                         date_end__gte=datetime.datetime.now())
+
+        keyboard = [[InlineKeyboardButton('Открыть коробку  🎉', callback_data='open'),
+                     InlineKeyboardButton('🎁  Призы  🎁', callback_data='about')],
+                    [InlineKeyboardButton('Как открыть коробку  ⁉', callback_data='how_open')],
+                    [InlineKeyboardButton('🥳  Мои подарки  🥳', callback_data='my_rewards')],
+                    [InlineKeyboardButton('💳  Пополнить баланс  💳', callback_data='payment')]]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        update.message.reply_text(text=f'Привет, {user.nickname}!', reply_markup=reply_markup)
+    else:
+        update.message.reply_text(text=f'Данная акция сейчас не активна')
+
+
 class Command(BaseCommand):
     help = 'Good Game Bot'
 
@@ -206,8 +230,8 @@ class Command(BaseCommand):
 
         updater = Updater(bot=bot)
 
-        start_handler = CommandHandler('start', do_start)
-        updater.dispatcher.add_handler(start_handler)
+        case_handler = CommandHandler('case', case_messages)
+        updater.dispatcher.add_handler(case_handler)
 
         buttons_handler = CallbackQueryHandler(callback=keyboard_callback_handler, pass_chat_data=False)
         updater.dispatcher.add_handler(buttons_handler)
