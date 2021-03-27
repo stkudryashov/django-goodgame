@@ -74,13 +74,13 @@ class Payment(models.Model):
 
 
 class Reward(models.Model):
-    profile = models.ForeignKey(Profile, verbose_name='владелец', on_delete=models.PROTECT)
+    user_id = models.TextField(verbose_name='владелец', null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='время получения')
     text = models.CharField(max_length=100, verbose_name='награда')
     is_received = models.BooleanField(default=False, verbose_name='получил')
 
     def __str__(self):
-        return f'pm-{self.pk}-id-{self.profile.external_id}'
+        return f'pm-{self.pk}-id-{self.user_id}'
 
     class Meta:
         verbose_name = 'награда'

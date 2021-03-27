@@ -10,16 +10,10 @@ class FullInfoUserAdmin(admin.ModelAdmin):
     form = FullInfoUserForm
 
 
-@admin.register(Payment)
-class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'profile', 'value', 'created_at')
-    list_display_links = ('id', 'profile')
-
-
 @admin.register(Reward)
-class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'profile', 'text', 'created_at', 'is_received')
-    list_display_links = ('id', 'profile')
+class RewardAdmin(admin.ModelAdmin):
+    list_display = ('user_id', 'text', 'created_at', 'is_received')
+    list_display_links = ('user_id',)
 
 
 @admin.register(ClubInfo)
