@@ -218,9 +218,8 @@ def case_messages(update: Update, context: CallbackContext, user):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         if case_body.image:
-            update.message.reply_photo(photo=case_body.image, reply_markup=reply_markup)
-        else:
-            update.message.reply_text(text=f'Привет, {user.nickname}!', reply_markup=reply_markup)
+            update.message.reply_photo(photo=case_body.image)
+        update.message.reply_text(text=f'Привет, {user.nickname}!', reply_markup=reply_markup)
     else:
         update.message.reply_text(text=f'Данная акция сейчас не активна')
 
