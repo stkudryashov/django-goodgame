@@ -17,4 +17,4 @@ class ClubInfoForm(forms.ModelForm):
 class CaseBodyForm(forms.ModelForm):
     class Meta:
         model = CaseBody
-        fields = ('club', 'date_start', 'date_end', 'how_open', 'about_text')
+        fields = ('club', 'date_start', 'date_end', 'how_open', 'about_text', 'image')

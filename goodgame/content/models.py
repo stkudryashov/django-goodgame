@@ -50,6 +50,7 @@ class CaseBody(models.Model):
     date_end = models.DateTimeField(verbose_name='конец акции')
     how_open = models.TextField(verbose_name='как открыть коробку', default='')
     about_text = models.TextField(verbose_name='о кейсах', default='')
+    image = models.ImageField(upload_to='images/cases/', verbose_name='изображение', null=True)
 
     def __str__(self):
         return f'{self.club}-{self.date_end}'
