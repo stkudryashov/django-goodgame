@@ -51,29 +51,6 @@ def get_payment_keyboard():
     return keyboard
 
 
-def get_loot_box_keyboard(value):
-    if value == 250:
-        keyboard = [[InlineKeyboardButton('💎  Кейс за 250  💎', callback_data='1box250')],
-                    [InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')]]
-    elif value == 500:
-        keyboard = [[InlineKeyboardButton('💎  2 Кейса за 250  💎', callback_data='2box250')],
-                    [InlineKeyboardButton('💎  Кейс за 500  💎', callback_data='1box250')],
-                    [InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')]]
-    elif value == 1000:
-        keyboard = [[InlineKeyboardButton('💎  3 Кейса за 250  💎', callback_data='3box250')],
-                    [InlineKeyboardButton('💎  2 Кейса за 500  💎', callback_data='2box250')],
-                    [InlineKeyboardButton('💎  Кейс за 1000  💎', callback_data='1box250')],
-                    [InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')]]
-    elif value == 2000:
-        keyboard = [[InlineKeyboardButton('💎  3 Кейса за 250  💎', callback_data='3box250')],
-                    [InlineKeyboardButton('💎  3 Кейса за 500  💎', callback_data='3box250')],
-                    [InlineKeyboardButton('💎  2 Кейса за 1000  💎', callback_data='2box250')],
-                    [InlineKeyboardButton('💎  Кейс за 2000  💎', callback_data='1box250')],
-                    [InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')]]
-
-    return InlineKeyboardMarkup(keyboard)
-
-
 def case_payments_last(user_id):
     now_time = datetime.now()
     last_lime = now_time - timedelta(hours=1)
