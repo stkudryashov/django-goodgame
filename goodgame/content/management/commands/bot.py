@@ -100,34 +100,22 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
     club = ClubInfo.objects.get(id_name=user.user_club)
     bot = telepot.Bot(club.telegram_token)
 
-    if data[0].isdigit():
-        count = data[0]
-        data = data[1:]
-        query.message.edit_text(
-            text=f'Поздравляем! Вы выиграли:')
-        if data == 'box250':
-            for i in range(int(count)):
-                loot = choice(box_250)
-                Reward(user_id=user.user_id, text=loot).save()
-                query.message.reply_text(text=loot)
-        elif data == 'box500':
-            for i in range(int(count)):
-                loot = choice(box_500)
-                Reward(user_id=user.user_id, text=loot).save()
-                query.message.reply_text(text=loot)
-        elif data == 'box1000':
-            for i in range(int(count)):
-                loot = choice(box_1000)
-                Reward(user_id=user.user_id, text=loot).save()
-                query.message.reply_text(text=loot)
-        elif data == 'box2000':
-            for i in range(int(count)):
-                loot = choice(box_2000)
-                Reward(user_id=user.user_id, text=loot).save()
-                query.message.reply_text(text=loot)
-        user.open_day = today.day
-        user.save()
-        query.message.reply_text(text='Назад на главную', reply_markup=case_back())
+    if data[0] == 'm':
+        try:
+            bot.deleteMessage(edit_message)
+        except telepot.exception.TelegramError:
+            pass
+        finally:
+            data = data[1:]
+
+            main_log = Mainlog(cashadd=float(data), clientid=user.user_id)
+            main_log.save()
+
+            bot.sendMessage(
+                chat_id=user.telegram_id,
+                text='Вы пополнили баланс на {}₽'.format(data),
+                reply_markup=case_back()
+            )
     elif 'CaseShow' in button_press:
         try:
             bot.deleteMessage(edit_message)
@@ -179,34 +167,18 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
             value = button_press.split(' ')[1]
             case_open(user.user_id, club.id, value)
 
-    elif data == 'CaseMyRewards':
-        keyboard = []
-        rewards = Reward.objects.filter(user_id=user.user_id, is_received=False)
-        if rewards:
-            for reward in rewards:
-                keyboard.append([InlineKeyboardButton(reward.text, callback_data='re' + str(reward.pk))])
-            keyboard.append([InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')])
-            query.message.edit_text(text='Открывай награды только при администраторе!\n\n'
-                                         'Ваши доступные награды:', reply_markup=InlineKeyboardMarkup(keyboard))
-        else:
-            query.message.edit_text(text='У вас пока нет наград  😢', reply_markup=case_back())
+    # elif data == 'CaseMyRewards':
+    #     keyboard = []
+    #     rewards = Reward.objects.filter(user_id=user.user_id, is_received=False)
+    #     if rewards:
+    #         for reward in rewards:
+    #             keyboard.append([InlineKeyboardButton(reward.text, callback_data='re' + str(reward.pk))])
+    #         keyboard.append([InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')])
+    #         query.message.edit_text(text='Открывай награды только при администраторе!\n\n'
+    #                                      'Ваши доступные награды:', reply_markup=InlineKeyboardMarkup(keyboard))
+    #     else:
+    #         query.message.edit_text(text='У вас пока нет наград  😢', reply_markup=case_back())
 
-    elif data[0] == 'm':
-        try:
-            bot.deleteMessage(edit_message)
-        except telepot.exception.TelegramError:
-            pass
-        finally:
-            data = data[1:]
-
-            main_log = Mainlog(cashadd=float(data), clientid=user.user_id)
-            main_log.save()
-
-            bot.sendMessage(
-                chat_id=user.telegram_id,
-                text='Вы пополнили баланс на {}₽'.format(data),
-                reply_markup=case_back()
-            )
     # elif data[0:2] == 're':
     #     del_pk = data[2:]
     #     reward = Reward.objects.get(pk=int(del_pk))
