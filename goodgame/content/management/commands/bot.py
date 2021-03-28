@@ -72,12 +72,6 @@ def get_loot_box_keyboard(value):
     return InlineKeyboardMarkup(keyboard)
 
 
-# @get_or_create_profile
-# def do_start(update: Update, context: CallbackContext, user):
-#     reply_markup = get_main_keyboard()
-#     update.message.reply_text(text=f'Привет, {user.name}!', reply_markup=reply_markup)
-
-
 def case_payments_last(user):
     now_time = datetime.now()
     last_lime = now_time - timedelta(hours=24)
