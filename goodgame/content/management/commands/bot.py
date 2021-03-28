@@ -166,18 +166,13 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
         finally:
             value = button_press.split(' ')[1]
             case_open(user.user_id, club.id, value)
-
-    # elif data == 'CaseMyRewards':
-    #     keyboard = []
-    #     rewards = Reward.objects.filter(user_id=user.user_id, is_received=False)
-    #     if rewards:
-    #         for reward in rewards:
-    #             keyboard.append([InlineKeyboardButton(reward.text, callback_data='re' + str(reward.pk))])
-    #         keyboard.append([InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')])
-    #         query.message.edit_text(text='Открывай награды только при администраторе!\n\n'
-    #                                      'Ваши доступные награды:', reply_markup=InlineKeyboardMarkup(keyboard))
-    #     else:
-    #         query.message.edit_text(text='У вас пока нет наград  😢', reply_markup=case_back())
+    elif 'CaseMyRewards' in button_press:
+        try:
+            bot.deleteMessage(edit_message)
+        except telepot.exception.TelegramError:
+            pass
+        finally:
+            case_my_reward(user.user_id, club.id)
 
     # elif data[0:2] == 're':
     #     del_pk = data[2:]
@@ -292,7 +287,33 @@ def case_open(user_id, club_id, value):
     user_reward = CaseReward(club_id=club.id_name, user_id=user.user_id, text=reward)
     user_reward.save()
 
-    bot.sendMessage(chat_id=user.telegram_id, text='Поздравляем, ваш приз: {}!'.format(reward), reply_markup=case_back())
+    bot.sendMessage(chat_id=user.telegram_id, text='Поздравляем, ваш приз: {}!'.format(reward),
+                    reply_markup=case_back())
+
+
+def case_my_reward(user_id, club_id):
+    club = ClubInfo.objects.get(id=club_id)
+    bot = telepot.Bot(club.telegram_token)
+
+    user = FullInfoUser.objects.get(user_id=user_id)
+
+    user_rewards = CaseReward.objects.filter(club_id=club.id_name, user_id=user_id, is_received=False)
+
+    keyboard = []
+    for reward in user_rewards:  # собираем клавиатуру из доступных кейсов
+        keyboard.append([InlineKeyboardButton(
+            text=reward.text,
+            callback_data='CaseReward {}'.format(reward.id))]
+        )
+
+    keyboard.append([InlineKeyboardButton(text='🔙  Назад  🔙', callback_data='CaseBack')])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+    bot.sendMessage(
+        chat_id=user.telegram_id,
+        text='Доступные награды: ',
+        reply_markup=keyboard
+    )
 
 
 class Command(BaseCommand):
