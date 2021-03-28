@@ -45,15 +45,16 @@ class ClubInfo(models.Model):
 
 
 class CaseBody(models.Model):
-    club = models.TextField(verbose_name='в каком клубе', default='')
-    date_start = models.DateTimeField(verbose_name='начало акции')
-    date_end = models.DateTimeField(verbose_name='конец акции')
-    how_open = models.TextField(verbose_name='как открыть коробку', default='')
-    about_text = models.TextField(verbose_name='о кейсах', default='')
-    image = models.ImageField(upload_to='images/cases/', verbose_name='изображение', null=True)
+    club = models.TextField(default='goodgame', verbose_name='в каком клубе', null=True)
+    date_start = models.DateTimeField(blank=True, verbose_name='начало акции', null=True)
+    date_end = models.DateTimeField(blank=True, verbose_name='конец акции', null=True)
+    how_open = models.TextField(blank=True, verbose_name='как открыть коробку', null=True)
+    about_text = models.TextField(blank=True, verbose_name='о кейсах', null=True)
+    message_text = models.TextField(blank=True, verbose_name='сообщение', null=True)
+    image = models.ImageField(blank=True, upload_to='images/cases/', verbose_name='изображение', null=True)
 
     def __str__(self):
-        return f'{self.club}-{self.date_end}'
+        return '{}-{}'.format(self.club, self.date_end)
 
     class Meta:
         verbose_name = 'кейс'
@@ -61,11 +62,11 @@ class CaseBody(models.Model):
 
 
 class CasesCost(models.Model):
-    club = models.TextField(verbose_name='в каком клубе', default='')
-    cost = models.CharField(max_length=8, verbose_name='цена кейса', default='')
+    club = models.TextField(blank=True, verbose_name='в каком клубе', null=True)
+    cost = models.CharField(blank=True, max_length=8, verbose_name='цена кейса', null=True)
 
     def __str__(self):
-        return f'{self.club}-{self.cost}'
+        return '{}-{}'.format(self.club, self.cost)
 
     class Meta:
         verbose_name = 'цена кейса'

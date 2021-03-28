@@ -11,37 +11,32 @@ from telegram.utils.request import Request
 from content.models import FullInfoUser, ClubInfo, CaseBody, CasesCost, Mainlog, Reward
 
 from random import choice
-import datetime
+from datetime import datetime
+from datetime import timedelta
 
 import telepot
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 def get_or_create_profile(f):
-    def inner(update: Update, context: CallbackContext):
-        chat_id = update.message.chat_id
-        p, _ = FullInfoUser.objects.get_or_create(
-            telegram_id=chat_id,
-            user_id=chat_id,
-            user_club='goodgame1',
-            defaults={'nickname': update.message.from_user.name}
-        )
-        f(p.pk, p.user_club)
+    def inner(update=None, context=None, user_id=None, club_id=None):
+        try:
+            chat_id = update.message.chat_id
+            p, _ = FullInfoUser.objects.get_or_create(
+                telegram_id=chat_id,
+                user_id=chat_id,
+                user_club='goodgame1',
+                defaults={'nickname': update.message.from_user.name}
+            )
+            f(p.pk, p.user_club)
+        except AttributeError:
+            f(user_id, club_id)
     return inner
 
 
-def case_keyboard():
-    keyboard = [[InlineKeyboardButton('Открыть коробку  🎉', callback_data='CaseOpen'),
-                 InlineKeyboardButton('🎁  Призы  🎁', callback_data='CaseAbout')],
-                [InlineKeyboardButton('Как открыть коробку  ⁉', callback_data='CaseHowOpen')],
-                [InlineKeyboardButton('🥳  Мои подарки  🥳', callback_data='CaseMyRewards')],
-                [InlineKeyboardButton('💳  Пополнить баланс  💳', callback_data='CasePayment')]]
-    return InlineKeyboardMarkup(keyboard)
-
-
-def get_back_keyboard():
-    keyboard = [[InlineKeyboardButton('🔙  Назад  🔙', callback_data='back')]]
-    return InlineKeyboardMarkup(keyboard)
+def case_back():
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='🔙  Назад  🔙', callback_data='CaseBack')]])
+    return keyboard
 
 
 def get_payment_keyboard():
@@ -83,10 +78,10 @@ def get_loot_box_keyboard(value):
 #     update.message.reply_text(text=f'Привет, {user.name}!', reply_markup=reply_markup)
 
 
-def get_payments_last(user):
-    now_time = datetime.datetime.now()
-    last_lime = now_time - datetime.timedelta(minutes=1)
-    recently = Mainlog.objects.filter(clientid=user.user_id, recorddtime__gte=last_lime)
+def case_payments_last(user):
+    now_time = datetime.now()
+    last_lime = now_time - timedelta(hours=24)
+    recently = Mainlog.objects.filter(clientid=user.user_id, recorddtime__gte=last_lime, cashadd__gte=0)
 
     pay_sum = 0
     if recently:
@@ -100,8 +95,14 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     data = query.data
 
+    button_press = data
+    edit_message = (query.message.chat_id, query.message.message_id)
+
     user = FullInfoUser.objects.get(telegram_id=query.message.chat_id)
-    today = datetime.datetime.today()
+    today = datetime.today()
+
+    club = ClubInfo.objects.get(id_name=user.user_club)
+    bot = telepot.Bot(club.telegram_token)
 
     if data[0].isdigit():
         count = data[0]
@@ -130,14 +131,14 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
                 query.message.reply_text(text=loot)
         user.open_day = today.day
         user.save()
-        query.message.reply_text(text='Назад на главную', reply_markup=get_back_keyboard())
+        query.message.reply_text(text='Назад на главную', reply_markup=case_back())
     elif data == 'CaseOpen':
         if True:  # user.open_day != today.day
-            pay_sum = get_payments_last(user)
+            pay_sum = case_payments_last(user)
             if pay_sum < 250:
                 query.message.edit_text(
                     text=f'За последние 24 часа {pay_sum}₽\n\nНужно пополнится чтобы получить подарок  😢',
-                    reply_markup=get_back_keyboard())
+                    reply_markup=case_back())
             elif pay_sum < 500:
                 query.message.edit_text(
                     text=f'За последние 24 часа {pay_sum}₽\n\nОткрой свой подарок  😉',
@@ -159,10 +160,31 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
         #         text='Ты уже получил сегодня подарки\n\nВозвращайся завтра  😴',
         #         reply_markup=get_back_keyboard())
 
-    elif data == 'CaseAbout':
-        case_about(user.pk, user.user_club)
-    elif data == 'CaseHowOpen':
-        case_how_open(user.pk, user.user_club)
+    elif 'CaseAbout' in button_press:
+        try:
+            bot.deleteMessage(edit_message)
+        except telepot.exception.TelegramError:
+            pass
+        finally:
+            case_about(user.telegram_id, club.id)
+    elif 'CaseHowOpen' in button_press:
+        try:
+            bot.deleteMessage(edit_message)
+        except telepot.exception.TelegramError:
+            pass
+        finally:
+            case_how_open(user.telegram_id, club.id)
+    elif 'CaseBack' in button_press:
+        try:
+            bot.deleteMessage(edit_message)
+        except telepot.exception.TelegramError:
+            pass
+        finally:
+            # убрать именованные аргументы, оставить только значения, как в комменте ниже
+            # case_messages(user.id, club.id_name)
+            # костыль, чтобы у меня все работало
+            case_messages(user_id=user.id, club_id=club.id_name)
+
     elif data == 'CasePayment':
         query.message.edit_text(
             text=f'На какую сумму пополнение?',
@@ -178,9 +200,7 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
             query.message.edit_text(text='Открывай награды только при администраторе!\n\n'
                                          'Ваши доступные награды:', reply_markup=InlineKeyboardMarkup(keyboard))
         else:
-            query.message.edit_text(text='У вас пока нет наград  😢', reply_markup=get_back_keyboard())
-    elif data == 'back':
-        query.message.edit_text(text='Что вы хотите сделать?', reply_markup=case_keyboard())
+            query.message.edit_text(text='У вас пока нет наград  😢', reply_markup=case_back())
     elif data[0] == 'm':
         data = data[1:]
 
@@ -189,7 +209,7 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
 
         query.message.edit_text(
             text=f'Вы пополнили баланс на {data}₽',
-            reply_markup=get_back_keyboard()
+            reply_markup=case_back()
         )
     elif data[0:2] == 're':
         del_pk = data[2:]
@@ -198,7 +218,7 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
         reward.save()
         query.edit_message_text(
             text=f'Вы получили свой подарок:\n\n✨  {reward.text}  ✨',
-            reply_markup=get_back_keyboard()
+            reply_markup=case_back()
         )
 
 
@@ -209,45 +229,48 @@ def case_messages(user_id, club_id):
 
     bot = telepot.Bot(club.telegram_token)
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text='Открыть коробку  🎉', callback_data='CaseOpen'),
-                          InlineKeyboardButton(text='🎁  Призы  🎁', callback_data='CaseAbout')],
-                         [InlineKeyboardButton(text='Как открыть коробку  ⁉', callback_data='CaseHowOpen')],
-                         [InlineKeyboardButton(text='🥳  Мои подарки  🥳', callback_data='CaseMyRewards')],
-                         [InlineKeyboardButton(text='💳  Пополнить баланс  💳', callback_data='CasePayment')]])
+    if CaseBody.objects.filter(club=club.id_name, date_start__lte=datetime.now(),
+                               date_end__gte=datetime.now()).count() == 1:
 
-    if CaseBody.objects.filter(club=club.id_name, date_start__lte=datetime.datetime.now(),
-                               date_end__gte=datetime.datetime.now()).count() == 1:
+        case_body = CaseBody.objects.get(club=club.id_name, date_start__lte=datetime.now(),
+                                         date_end__gte=datetime.now())
 
-        case_body = CaseBody.objects.get(club=club.id_name, date_start__lte=datetime.datetime.now(),
-                                         date_end__gte=datetime.datetime.now())
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text='Открыть коробку  🎉', callback_data='CaseOpen'),
+                              InlineKeyboardButton(text='🎁  Призы  🎁', callback_data='CaseAbout')],
+                             [InlineKeyboardButton(text='Как открыть коробку  ⁉', callback_data='CaseHowOpen')],
+                             [InlineKeyboardButton(text='🥳  Мои подарки  🥳', callback_data='CaseMyRewards')],
+                             [InlineKeyboardButton(text='💳  Пополнить баланс  💳', callback_data='CasePayment')]]
+        )
 
         if case_body.image:
             bot.sendPhoto(chat_id=user.telegram_id, photo=case_body.image, reply_markup=keyboard)
         else:
-            bot.sendMessage(chat_id=user.telegram_id, text=f'Привет, {user.nickname}!', reply_markup=keyboard)
+            if case_body.message_text:
+                bot.sendMessage(chat_id=user.telegram_id, text=case_body.message_text, reply_markup=keyboard)
+            else:
+                bot.sendMessage(chat_id=user.telegram_id, text='Привет, {}!'.format(user.nickname),
+                                reply_markup=keyboard)
     else:
-        bot.sendMessage(chat_id=user.telegram_id, text=f'Данная акция сейчас не активна')
+        bot.sendMessage(chat_id=user.telegram_id, text='Данная акция сейчас не активна')
 
 
-def case_about(user_id, club_id):
-    club = ClubInfo.objects.get(id_name=club_id)
-    user = FullInfoUser.objects.get(id=user_id)
-
+def case_about(telegram_id, club_id):
+    club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
 
-    how_open = CaseBody.objects.get(club=club_id).how_open
-    bot.sendMessage(chat_id=user.telegram_id, text=how_open)
+    about_text = CaseBody.objects.get(club=club.id_name, date_start__lte=datetime.now(),
+                                      date_end__gte=datetime.now()).about_text
+    bot.sendMessage(chat_id=telegram_id, text=about_text, reply_markup=case_back())
 
 
-def case_how_open(user_id, club_id):
-    club = ClubInfo.objects.get(id_name=club_id)
-    user = FullInfoUser.objects.get(id=user_id)
-
+def case_how_open(telegram_id, club_id):
+    club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
 
-    about_text = CaseBody.objects.get(club=club_id).about_text
-    bot.sendMessage(chat_id=user.telegram_id, text=about_text)
+    how_open = CaseBody.objects.get(club=club.id_name, date_start__lte=datetime.now(),
+                                    date_end__gte=datetime.now()).how_open
+    bot.sendMessage(chat_id=telegram_id, text=how_open, reply_markup=case_back())
 
 
 class Command(BaseCommand):
