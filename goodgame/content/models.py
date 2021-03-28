@@ -60,6 +60,18 @@ class CaseBody(models.Model):
         verbose_name_plural = 'кейсы'
 
 
+class CasesCost(models.Model):
+    club = models.TextField(verbose_name='в каком клубе', default='')
+    cost = models.CharField(max_length=8, verbose_name='цена кейса', default='')
+
+    def __str__(self):
+        return f'{self.club}-{self.cost}'
+
+    class Meta:
+        verbose_name = 'цена кейса'
+        verbose_name_plural = 'цены кейсов'
+
+
 class Payment(models.Model):
     profile = models.ForeignKey(Profile, verbose_name='профиль', on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='время отправки')
@@ -85,6 +97,19 @@ class Reward(models.Model):
     class Meta:
         verbose_name = 'награда'
         verbose_name_plural = 'награды'
+
+
+class CaseRewards(models.Model):
+    club = models.TextField(verbose_name='в каком клубе', default='')
+    cost = models.CharField(max_length=8, verbose_name='цена кейса', default='')
+    text = models.CharField(max_length=100, verbose_name='награда', default='')
+
+    def __str__(self):
+        return f'cost-{self.cost}-id-{self.club}'
+
+    class Meta:
+        verbose_name = 'список наград'
+        verbose_name_plural = 'список наград'
 
 
 class Mainlog(models.Model):

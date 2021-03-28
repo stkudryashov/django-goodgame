@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .forms import FullInfoUserForm, ClubInfoForm, CaseBodyForm
-from .models import FullInfoUser, Payment, Reward, ClubInfo, CaseBody, Mainlog
+from .forms import FullInfoUserForm, ClubInfoForm, CaseBodyForm, CasesCostForm
+from .models import FullInfoUser, Payment, Reward, ClubInfo, CaseBody, CasesCost, Mainlog
 
 
 @admin.register(FullInfoUser)
@@ -28,6 +28,13 @@ class CaseBodyAdmin(admin.ModelAdmin):
     list_display = ('club', 'date_start', 'date_end')
     list_display_links = ('club',)
     form = CaseBodyForm
+
+
+@admin.register(CasesCost)
+class CasesCostAdmin(admin.ModelAdmin):
+    list_display = ('club', 'cost')
+    list_display_links = ('club', 'cost')
+    form = CasesCostForm
 
 
 @admin.register(Mainlog)

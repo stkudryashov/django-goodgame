@@ -2,17 +2,19 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 
 from telegram import Bot, Update
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 from telegram.ext import Updater, CommandHandler
 from telegram.ext import CallbackContext, CallbackQueryHandler
 
 from telegram.utils.request import Request
 
-from content.models import FullInfoUser, ClubInfo, CaseBody, Mainlog, Reward
+from content.models import FullInfoUser, ClubInfo, CaseBody, CasesCost, Mainlog, Reward
 
 from random import choice
 import datetime
+
+import telepot
+from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 def get_or_create_profile(f):
@@ -24,8 +26,7 @@ def get_or_create_profile(f):
             user_club='goodgame1',
             defaults={'nickname': update.message.from_user.name}
         )
-        f(update, context, p)
-
+        f(p.telegram_id, p.user_club)
     return inner
 
 
@@ -159,11 +160,9 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
         #         reply_markup=get_back_keyboard())
 
     elif data == 'CaseAbout':
-        about_text = CaseBody.objects.get(club=user.user_club).about_text
-        query.message.edit_text(text=about_text, reply_markup=get_back_keyboard())
+        case_about(user.telegram_id, user.user_club)
     elif data == 'CaseHowOpen':
-        how_open = CaseBody.objects.get(club=user.user_club).how_open
-        query.message.edit_text(text=how_open, reply_markup=get_back_keyboard())
+        case_how_open(user.telegram_id, user.user_club)
     elif data == 'CasePayment':
         query.message.edit_text(
             text=f'На какую сумму пополнение?',
@@ -204,10 +203,18 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
 
 
 @get_or_create_profile
-def case_messages(update: Update, context: CallbackContext, user):
-    club = ClubInfo.objects.get(id_name=user.user_club)
+def case_messages(user_id, club_id):
+    club = ClubInfo.objects.get(id_name=club_id)
+    user = FullInfoUser.objects.get(user_id=user_id)
 
-    # bot = telepot.Bot(club.telegram_token)
+    bot = telepot.Bot(club.telegram_token)
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text='Открыть коробку  🎉', callback_data='CaseOpen'),
+                          InlineKeyboardButton(text='🎁  Призы  🎁', callback_data='CaseAbout')],
+                         [InlineKeyboardButton(text='Как открыть коробку  ⁉', callback_data='CaseHowOpen')],
+                         [InlineKeyboardButton(text='🥳  Мои подарки  🥳', callback_data='CaseMyRewards')],
+                         [InlineKeyboardButton(text='💳  Пополнить баланс  💳', callback_data='CasePayment')]])
 
     if CaseBody.objects.filter(club=club.id_name, date_start__lte=datetime.datetime.now(),
                                date_end__gte=datetime.datetime.now()).count() == 1:
@@ -216,10 +223,30 @@ def case_messages(update: Update, context: CallbackContext, user):
                                          date_end__gte=datetime.datetime.now())
 
         if case_body.image:
-            update.message.reply_photo(photo=case_body.image)
-        update.message.reply_text(text=f'Привет, {user.nickname}!', reply_markup=case_keyboard())
+            bot.sendPhoto(chat_id=user.telegram_id, photo=case_body.image)
+        bot.sendMessage(chat_id=user.telegram_id, text=f'Привет, {user.nickname}!', reply_markup=keyboard)
     else:
-        update.message.reply_text(text=f'Данная акция сейчас не активна')
+        bot.sendMessage(chat_id=user.telegram_id, text=f'Данная акция сейчас не активна')
+
+
+def case_about(user_id, club_id):
+    club = ClubInfo.objects.get(id_name=club_id)
+    user = FullInfoUser.objects.get(user_id=user_id)
+
+    bot = telepot.Bot(club.telegram_token)
+
+    how_open = CaseBody.objects.get(club=club_id).how_open
+    bot.sendMessage(chat_id=user.telegram_id, text=how_open)
+
+
+def case_how_open(user_id, club_id):
+    club = ClubInfo.objects.get(id_name=club_id)
+    user = FullInfoUser.objects.get(user_id=user_id)
+
+    bot = telepot.Bot(club.telegram_token)
+
+    about_text = CaseBody.objects.get(club=club_id).about_text
+    bot.sendMessage(chat_id=user.telegram_id, text=about_text)
 
 
 class Command(BaseCommand):
