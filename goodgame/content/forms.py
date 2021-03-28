@@ -1,5 +1,5 @@
 from django import forms
-from .models import FullInfoUser, ClubInfo, CaseBody, CaseGrades
+from .models import FullInfoUser, ClubInfo, CaseBody, CaseGrades, CaseReward
 
 
 class FullInfoUserForm(forms.ModelForm):
@@ -24,3 +24,9 @@ class CaseGradesForm(forms.ModelForm):
     class Meta:
         model = CaseGrades
         fields = ('club', 'cost', 'text', 'rewards')
+
+
+class CaseRewardForm(forms.ModelForm):
+    class Meta:
+        model = CaseReward
+        fields = ('club_id', 'user_id', 'text')

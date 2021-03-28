@@ -8,7 +8,7 @@ from telegram.ext import CallbackContext, CallbackQueryHandler
 
 from telegram.utils.request import Request
 
-from content.models import FullInfoUser, ClubInfo, CaseBody, CaseGrades, Mainlog, Reward
+from content.models import FullInfoUser, ClubInfo, CaseBody, CaseGrades, CaseReward, Mainlog
 
 from random import choice
 from datetime import datetime
@@ -170,6 +170,14 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
                 text=f'На какую сумму пополнение?',
                 reply_markup=get_payment_keyboard()
             )
+    elif 'CaseOpen' in button_press:
+        try:
+            bot.deleteMessage(edit_message)
+        except telepot.exception.TelegramError:
+            pass
+        finally:
+            value = button_press.split(' ')[1]
+            case_open(user.user_id, club.id, value)
 
     elif data == 'CaseMyRewards':
         keyboard = []
@@ -199,15 +207,15 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
                 text='Вы пополнили баланс на {}₽'.format(data),
                 reply_markup=case_back()
             )
-    elif data[0:2] == 're':
-        del_pk = data[2:]
-        reward = Reward.objects.get(pk=int(del_pk))
-        reward.is_received = True
-        reward.save()
-        query.edit_message_text(
-            text=f'Вы получили свой подарок:\n\n✨  {reward.text}  ✨',
-            reply_markup=case_back()
-        )
+    # elif data[0:2] == 're':
+    #     del_pk = data[2:]
+    #     reward = Reward.objects.get(pk=int(del_pk))
+    #     reward.is_received = True
+    #     reward.save()
+    #     query.edit_message_text(
+    #         text=f'Вы получили свой подарок:\n\n✨  {reward.text}  ✨',
+    #         reply_markup=case_back()
+    #     )
 
 
 @get_or_create_profile
@@ -298,6 +306,21 @@ def case_show(user_id, club_id):
     #     query.message.edit_text(
     #         text='Ты уже получил сегодня подарки\n\nВозвращайся завтра  😴',
     #         reply_markup=get_back_keyboard())
+
+
+def case_open(user_id, club_id, value):
+    club = ClubInfo.objects.get(id=club_id)
+    bot = telepot.Bot(club.telegram_token)
+
+    user = FullInfoUser.objects.get(user_id=user_id)
+
+    rewards = CaseGrades.objects.get(club=club.id_name, cost=value).rewards
+    reward = choice(rewards.split(', '))
+
+    user_reward = CaseReward(club_id=club.id_name, user_id=user.user_id, text=reward)
+    user_reward.save()
+
+    bot.sendMessage(chat_id=user.telegram_id, text='Поздравляем, ваш приз: {}!'.format(reward), reply_markup=case_back())
 
 
 class Command(BaseCommand):

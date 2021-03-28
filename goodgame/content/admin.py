@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .forms import FullInfoUserForm, ClubInfoForm, CaseBodyForm, CaseGradesForm
-from .models import FullInfoUser, Payment, Reward, ClubInfo, CaseBody, CaseGrades, Mainlog
+from .forms import FullInfoUserForm, ClubInfoForm, CaseBodyForm, CaseGradesForm, CaseRewardForm
+from .models import FullInfoUser, ClubInfo, CaseBody, CaseGrades, CaseReward, Mainlog
 
 
 @admin.register(FullInfoUser)
@@ -8,12 +8,6 @@ class FullInfoUserAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_id', 'user_club', 'nickname', 'telegram_id')
     list_display_links = ('id', 'user_id', 'nickname')
     form = FullInfoUserForm
-
-
-@admin.register(Reward)
-class RewardAdmin(admin.ModelAdmin):
-    list_display = ('user_id', 'text', 'created_at', 'is_received')
-    list_display_links = ('user_id',)
 
 
 @admin.register(ClubInfo)
@@ -32,9 +26,16 @@ class CaseBodyAdmin(admin.ModelAdmin):
 
 @admin.register(CaseGrades)
 class CaseGradesAdmin(admin.ModelAdmin):
-    list_display = ('club', 'cost', 'text')
+    list_display = ('club', 'cost', 'text', 'rewards')
     list_display_links = ('club', 'cost')
     form = CaseGradesForm
+
+
+@admin.register(CaseReward)
+class CaseRewardAdmin(admin.ModelAdmin):
+    list_display = ('club_id', 'user_id', 'text', 'created_at', 'is_received')
+    list_display_links = ('club_id', 'user_id')
+    form = CaseRewardForm
 
 
 @admin.register(Mainlog)
