@@ -26,7 +26,7 @@ def get_or_create_profile(f):
             user_club='goodgame1',
             defaults={'nickname': update.message.from_user.name}
         )
-        f(p.telegram_id, p.user_club)
+        f(p.pk, p.user_club)
     return inner
 
 
@@ -160,9 +160,9 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
         #         reply_markup=get_back_keyboard())
 
     elif data == 'CaseAbout':
-        case_about(user.telegram_id, user.user_club)
+        case_about(user.pk, user.user_club)
     elif data == 'CaseHowOpen':
-        case_how_open(user.telegram_id, user.user_club)
+        case_how_open(user.pk, user.user_club)
     elif data == 'CasePayment':
         query.message.edit_text(
             text=f'На какую сумму пополнение?',
@@ -205,7 +205,7 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
 @get_or_create_profile
 def case_messages(user_id, club_id):
     club = ClubInfo.objects.get(id_name=club_id)
-    user = FullInfoUser.objects.get(user_id=user_id)
+    user = FullInfoUser.objects.get(id=user_id)
 
     bot = telepot.Bot(club.telegram_token)
 
@@ -223,15 +223,16 @@ def case_messages(user_id, club_id):
                                          date_end__gte=datetime.datetime.now())
 
         if case_body.image:
-            bot.sendPhoto(chat_id=user.telegram_id, photo=case_body.image)
-        bot.sendMessage(chat_id=user.telegram_id, text=f'Привет, {user.nickname}!', reply_markup=keyboard)
+            bot.sendPhoto(chat_id=user.telegram_id, photo=case_body.image, reply_markup=keyboard)
+        else:
+            bot.sendMessage(chat_id=user.telegram_id, text=f'Привет, {user.nickname}!', reply_markup=keyboard)
     else:
         bot.sendMessage(chat_id=user.telegram_id, text=f'Данная акция сейчас не активна')
 
 
 def case_about(user_id, club_id):
     club = ClubInfo.objects.get(id_name=club_id)
-    user = FullInfoUser.objects.get(user_id=user_id)
+    user = FullInfoUser.objects.get(id=user_id)
 
     bot = telepot.Bot(club.telegram_token)
 
@@ -241,7 +242,7 @@ def case_about(user_id, club_id):
 
 def case_how_open(user_id, club_id):
     club = ClubInfo.objects.get(id_name=club_id)
-    user = FullInfoUser.objects.get(user_id=user_id)
+    user = FullInfoUser.objects.get(id=user_id)
 
     bot = telepot.Bot(club.telegram_token)
 
