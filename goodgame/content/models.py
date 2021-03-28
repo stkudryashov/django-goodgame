@@ -61,14 +61,14 @@ class CaseGrades(models.Model):
 
 
 class CaseReward(models.Model):
-    club_id = models.TextField(blank=True, verbose_name='id клуба', null=True)
+    club = models.TextField(blank=True, verbose_name='id клуба', null=True)
     user_id = models.TextField(blank=True, verbose_name='владелец', null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='время получения')
     text = models.CharField(blank=True, max_length=100, verbose_name='награда', null=True)
     is_received = models.BooleanField(default=False, verbose_name='получил')
 
     def __str__(self):
-        return 'club-{}-id-{}'.format(self.club_id, self.user_id)
+        return 'club-{}-id-{}'.format(self.club, self.user_id)
 
     class Meta:
         verbose_name = 'награда пользователя'

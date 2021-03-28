@@ -29,4 +29,4 @@ class CaseGradesForm(forms.ModelForm):
 class CaseRewardForm(forms.ModelForm):
     class Meta:
         model = CaseReward
-        fields = ('club_id', 'user_id', 'text')
+        fields = ('club', 'user_id', 'text')

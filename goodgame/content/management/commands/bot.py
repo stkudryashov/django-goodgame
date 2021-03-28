@@ -284,7 +284,7 @@ def case_open(user_id, club_id, value):
     rewards = CaseGrades.objects.get(club=club.id_name, cost=value).rewards
     reward = choice(rewards.split(', '))
 
-    user_reward = CaseReward(club_id=club.id_name, user_id=user.user_id, text=reward)
+    user_reward = CaseReward(club=club.id_name, user_id=user.user_id, text=reward)
     user_reward.save()
 
     bot.sendMessage(chat_id=user.telegram_id, text='Поздравляем, ваш приз: {}!'.format(reward),
@@ -297,7 +297,7 @@ def case_my_reward(user_id, club_id):
 
     user = FullInfoUser.objects.get(user_id=user_id)
 
-    user_rewards = CaseReward.objects.filter(club_id=club.id_name, user_id=user_id, is_received=False)
+    user_rewards = CaseReward.objects.filter(club=club.id_name, user_id=user_id, is_received=False)
 
     keyboard = []
     for reward in user_rewards:  # собираем клавиатуру из доступных кейсов
