@@ -57,20 +57,22 @@ class CaseBody(models.Model):
         return '{}-{}'.format(self.club, self.date_end)
 
     class Meta:
-        verbose_name = 'кейс'
-        verbose_name_plural = 'кейсы'
+        verbose_name = 'акция с кейсами'
+        verbose_name_plural = 'акции с кейсами'
 
 
-class CasesCost(models.Model):
-    club = models.TextField(blank=True, verbose_name='в каком клубе', null=True)
-    cost = models.CharField(blank=True, max_length=8, verbose_name='цена кейса', null=True)
+class CaseGrades(models.Model):
+    club = models.TextField(blank=True, default='goodgame', verbose_name='в каком клубе', null=True)
+    cost = models.IntegerField(blank=True, verbose_name='цена кейса', null=True)
+    text = models.TextField(blank=True, verbose_name='текст на кнопке', null=True)
+    rewards = models.TextField(blank=True, verbose_name='призы через запятую', null=True)
 
     def __str__(self):
         return '{}-{}'.format(self.club, self.cost)
 
     class Meta:
-        verbose_name = 'цена кейса'
-        verbose_name_plural = 'цены кейсов'
+        verbose_name = 'настройка кейса'
+        verbose_name_plural = 'настройки кейсов'
 
 
 class Payment(models.Model):
