@@ -8,7 +8,7 @@ class FullInfoUser(models.Model):
     telegram_id = models.TextField(verbose_name='telegram id')
 
     def __str__(self):
-        return f'{self.telegram_id}-{self.nickname}'
+        return '{}-{}'.format(self.telegram_id, self.nickname)
 
     class Meta:
         verbose_name = 'пользователь'
@@ -22,7 +22,7 @@ class ClubInfo(models.Model):
     telegram_token = models.TextField(blank=True, verbose_name='telegram токен', null=True)
 
     def __str__(self):
-        return f'{self.id_name}-{self.text_name}'
+        return '{}-{}'.format(self.id_name, self.text_name)
 
     class Meta:
         verbose_name = 'клуб'
