@@ -272,7 +272,7 @@ def case_show(user_id, club_id):
         pay_sum = case_payments_last(user.user_id)  # чек за последние сутки
         min_sum = case_grades.order_by('cost')[0].cost  # самый дешевый кейс
 
-        if pay_sum < min_sum:
+        if pay_sum < min_sum:  # если чек за последние сутки меньше, чем стоимость самого дешевого кейса
             bot.sendMessage(
                 chat_id=user.telegram_id,
                 text='За последние 24 часа {}₽\n\nНужно пополнится чтобы получить подарок  😢'.format(pay_sum),
@@ -281,7 +281,10 @@ def case_show(user_id, club_id):
             keyboard = []
             for case in case_grades:  # собираем клавиатуру из доступных кейсов
                 if pay_sum >= case.cost:
-                    keyboard.append([InlineKeyboardButton(text=case.text, callback_data='CaseOpen {}'.format(case.cost))])
+                    keyboard.append([InlineKeyboardButton(
+                        text=case.text,
+                        callback_data='CaseOpen {}'.format(case.cost))]
+                    )
 
             keyboard.append([InlineKeyboardButton(text='🔙  Назад  🔙', callback_data='CaseBack')])
             keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard)
@@ -291,7 +294,6 @@ def case_show(user_id, club_id):
                 text='За последние 24 часа {}₽\n\nОткрой свой подарок  😉'.format(pay_sum),
                 reply_markup=keyboard
             )
-
     # else:
     #     query.message.edit_text(
     #         text='Ты уже получил сегодня подарки\n\nВозвращайся завтра  😴',
