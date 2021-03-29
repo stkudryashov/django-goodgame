@@ -306,7 +306,7 @@ def case_my_reward(user_id, club_id):
 
     user = FullInfoUser.objects.get(id=user_id)
 
-    user_rewards = CaseReward.objects.filter(club=club.id_name, user_id=user_id, is_received=False)
+    user_rewards = CaseReward.objects.filter(club=club.id_name, user_id=user.user_id, is_received=False)
 
     keyboard = []
 
