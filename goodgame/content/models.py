@@ -51,6 +51,7 @@ class CaseGrades(models.Model):
     cost = models.IntegerField(blank=True, verbose_name='цена кейса', null=True)
     text = models.TextField(blank=True, verbose_name='текст на кнопке', null=True)
     rewards = models.TextField(blank=True, verbose_name='призы через запятую с пробелом', null=True)
+    weights = models.TextField(blank=True, verbose_name='веса через запятую с пробелом', null=True)
 
     def __str__(self):
         return '{}-{}'.format(self.club, self.cost)

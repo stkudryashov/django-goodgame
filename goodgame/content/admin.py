@@ -26,7 +26,7 @@ class CaseBodyAdmin(admin.ModelAdmin):
 
 @admin.register(CaseGrades)
 class CaseGradesAdmin(admin.ModelAdmin):
-    list_display = ('club', 'cost', 'text', 'rewards')
+    list_display = ('club', 'cost', 'text', 'rewards', 'weights')
     list_display_links = ('club', 'cost')
     form = CaseGradesForm
 
