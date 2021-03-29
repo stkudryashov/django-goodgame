@@ -17,8 +17,7 @@ from datetime import timedelta
 import telepot
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
-
-time_delta = timedelta(minutes=1)
+time_delta = timedelta(minutes=5)
 
 
 def get_or_create_profile(f):
@@ -35,6 +34,22 @@ def get_or_create_profile(f):
             f(p.pk, club.pk)
         except AttributeError:
             f(user_id, club_id)
+
+    return inner
+
+
+def case_is_active(f):
+    def inner(user_id, club_id):
+        club = ClubInfo.objects.get(id=club_id)
+        user = FullInfoUser.objects.get(id=user_id)
+
+        bot = telepot.Bot(club.telegram_token)
+
+        if CaseBody.objects.filter(club=club.id_name, date_start__lte=datetime.now(),
+                                   date_end__gte=datetime.now()).count() == 1:
+            f(user_id, club_id)
+        else:
+            bot.sendMessage(chat_id=user.telegram_id, text='Данная акция сейчас не активна')
 
     return inner
 
@@ -141,7 +156,7 @@ def edit_messages(update: Update, context: CallbackContext):
         finally:
             bot.sendMessage(
                 chat_id=user.telegram_id,
-                text=f'На какую сумму пополнение?',
+                text='На какую сумму пополнение?',
                 reply_markup=case_payment()
             )
     elif 'CaseOpen' in button_press:
@@ -159,14 +174,14 @@ def edit_messages(update: Update, context: CallbackContext):
             pass
         finally:
             case_my_reward(user.id, club.id)
-    elif 'CaseReward' in button_press:
-        try:
-            bot.deleteMessage(edit_message)
-        except telepot.exception.TelegramError:
-            pass
-        finally:
-            reward_id = button_press.split(' ')[1]
-            case_open_reward(user.id, club.id, reward_id)
+    # elif 'CaseReward' in button_press:
+    #     try:
+    #         bot.deleteMessage(edit_message)
+    #     except telepot.exception.TelegramError:
+    #         pass
+    #     finally:
+    #         reward_id = button_press.split(' ')[1]
+    #         case_open_reward(user.id, club.id, reward_id)
 
 
 @get_or_create_profile
@@ -202,6 +217,7 @@ def case_messages(user_id, club_id):
         bot.sendMessage(chat_id=user.telegram_id, text='Данная акция сейчас не активна')
 
 
+@case_is_active
 def case_about(user_id, club_id):
     club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
@@ -213,6 +229,7 @@ def case_about(user_id, club_id):
     bot.sendMessage(chat_id=user.telegram_id, text=about_text, reply_markup=case_back())
 
 
+@case_is_active
 def case_how_open(user_id, club_id):
     club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
@@ -224,6 +241,7 @@ def case_how_open(user_id, club_id):
     bot.sendMessage(chat_id=user.telegram_id, text=how_open, reply_markup=case_back())
 
 
+@case_is_active
 def case_show(user_id, club_id):
     club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
@@ -236,7 +254,7 @@ def case_show(user_id, club_id):
     last_lime = now_time - time_delta
 
     recently_open = CaseReward.objects.filter(
-        user_id=user_id,
+        user_id=user.user_id,
         created_at__gte=last_lime
     )  # сколько кейсов открыл за последние сутки
 
@@ -279,27 +297,32 @@ def case_open(user_id, club_id, value):
 
     user = FullInfoUser.objects.get(id=user_id)
 
-    rewards = CaseGrades.objects.get(club=club.id_name, cost=value).rewards
-    weights = CaseGrades.objects.get(club=club.id_name, cost=value).weights
+    if CaseBody.objects.filter(club=club.id_name, date_start__lte=datetime.now(),
+                               date_end__gte=datetime.now()).count() == 1:
+        rewards = CaseGrades.objects.get(club=club.id_name, cost=value).rewards
+        weights = CaseGrades.objects.get(club=club.id_name, cost=value).weights
 
-    if weights:
-        try:
-            weights = weights.split(', ')
-            weights = [float(value) for value in weights]
+        if weights:
+            try:
+                weights = weights.split(', ')
+                weights = [float(value) for value in weights]
 
-            reward = choices(rewards.split(', '), weights=weights, k=1)[0]
-        except ValueError:
+                reward = choices(rewards.split(', '), weights=weights, k=1)[0]
+            except ValueError:
+                reward = choice(rewards.split(', '))
+        else:
             reward = choice(rewards.split(', '))
+
+        user_reward = CaseReward(club=club.id_name, user_id=user.user_id, text=reward, case_cost=value)
+        user_reward.save()
+
+        bot.sendMessage(chat_id=user.telegram_id, text='Поздравляем, ваш приз: {}!'.format(reward),
+                        reply_markup=case_back())
     else:
-        reward = choice(rewards.split(', '))
-
-    user_reward = CaseReward(club=club.id_name, user_id=user.user_id, text=reward, case_cost=value)
-    user_reward.save()
-
-    bot.sendMessage(chat_id=user.telegram_id, text='Поздравляем, ваш приз: {}!'.format(reward),
-                    reply_markup=case_back())
+        bot.sendMessage(chat_id=user.telegram_id, text='Данная акция сейчас не активна')
 
 
+@case_is_active
 def case_my_reward(user_id, club_id):
     club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
@@ -308,48 +331,41 @@ def case_my_reward(user_id, club_id):
 
     user_rewards = CaseReward.objects.filter(club=club.id_name, user_id=user.user_id, is_received=False)
 
-    keyboard = []
-
+    reward_message = '🥳  Твои доступные награды:\n'
     if user_rewards:
-        for reward in user_rewards:  # собираем клавиатуру из доступных кейсов
-            keyboard.append([InlineKeyboardButton(
-                text=reward.text,
-                callback_data='CaseReward {}'.format(reward.id))]
-            )
-
-    keyboard.append([InlineKeyboardButton(text='🔙  Назад  🔙', callback_data='CaseBack')])
-    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard)
+        for reward in user_rewards:  # собираем сообщение с наградами
+            reward_message += '\n• ' + reward.text
 
     if user_rewards:
         bot.sendMessage(
             chat_id=user.telegram_id,
-            text='Открывай награды только при администраторе!\n\nДоступные награды:',
-            reply_markup=keyboard
+            text=reward_message,
+            reply_markup=case_back()
         )
     else:
         bot.sendMessage(
             chat_id=user.telegram_id,
             text='У вас пока нет наград  😢',
-            reply_markup=keyboard
+            reply_markup=case_back()
         )
 
 
-def case_open_reward(user_id, club_id, reward_id):
-    club = ClubInfo.objects.get(id=club_id)
-    bot = telepot.Bot(club.telegram_token)
-
-    user = FullInfoUser.objects.get(id=user_id)
-
-    reward = CaseReward.objects.get(id=reward_id)
-
-    reward.is_received = True
-    reward.save()
-
-    bot.sendMessage(
-        chat_id=user.telegram_id,
-        text='Вы получили свой подарок:\n\n✨  {}  ✨'.format(reward.text),
-        reply_markup=case_back()
-    )
+# def case_open_reward(user_id, club_id, reward_id):
+#     club = ClubInfo.objects.get(id=club_id)
+#     bot = telepot.Bot(club.telegram_token)
+#
+#     user = FullInfoUser.objects.get(id=user_id)
+#
+#     reward = CaseReward.objects.get(id=reward_id)
+#
+#     reward.is_received = True
+#     reward.save()
+#
+#     bot.sendMessage(
+#         chat_id=user.telegram_id,
+#         text='Вы получили свой подарок:\n\n✨  {}  ✨'.format(reward.text),
+#         reply_markup=case_back()
+#     )
 
 
 class Command(BaseCommand):
