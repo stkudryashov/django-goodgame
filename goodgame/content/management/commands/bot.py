@@ -262,10 +262,13 @@ def case_open(user_id, club_id, value):
     weights = CaseGrades.objects.get(club=club.id_name, cost=value).weights
 
     if weights:
-        weights = weights.split(', ')
-        weights = [float(value) for value in weights]
+        try:
+            weights = weights.split(', ')
+            weights = [float(value) for value in weights]
 
-        reward = choices(rewards.split(', '), weights=weights, k=1)[0]
+            reward = choices(rewards.split(', '), weights=weights, k=1)[0]
+        except ValueError:
+            reward = choice(rewards.split(', '))
     else:
         reward = choice(rewards.split(', '))
 
