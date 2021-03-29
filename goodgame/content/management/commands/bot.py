@@ -10,7 +10,7 @@ from telegram.utils.request import Request
 
 from content.models import FullInfoUser, ClubInfo, CaseBody, CaseGrades, CaseReward, Mainlog
 
-from random import choice
+from random import choice, choices
 from datetime import datetime
 from datetime import timedelta
 
@@ -259,7 +259,15 @@ def case_open(user_id, club_id, value):
     user = FullInfoUser.objects.get(user_id=user_id)
 
     rewards = CaseGrades.objects.get(club=club.id_name, cost=value).rewards
-    reward = choice(rewards.split(', '))
+    weights = CaseGrades.objects.get(club=club.id_name, cost=value).weights
+
+    if weights:
+        weights = weights.split(', ')
+        weights = [float(value) for value in weights]
+
+        reward = choices(rewards.split(', '), weights=weights, k=1)
+    else:
+        reward = choice(rewards.split(', '))
 
     user_reward = CaseReward(club=club.id_name, user_id=user.user_id, text=reward)
     user_reward.save()
