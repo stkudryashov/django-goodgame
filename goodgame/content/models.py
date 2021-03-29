@@ -66,6 +66,7 @@ class CaseReward(models.Model):
     user_id = models.TextField(blank=True, verbose_name='владелец', null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='время получения')
     text = models.CharField(blank=True, max_length=100, verbose_name='награда', null=True)
+    case_cost = models.IntegerField(blank=True, verbose_name='из какого кейса', null=True)
     is_received = models.BooleanField(default=False, verbose_name='получил')
 
     def __str__(self):
