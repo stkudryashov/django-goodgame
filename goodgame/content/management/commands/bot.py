@@ -265,11 +265,11 @@ def case_open(user_id, club_id, value):
         weights = weights.split(', ')
         weights = [float(value) for value in weights]
 
-        reward = choices(rewards.split(', '), weights=weights, k=1)
+        reward = choices(rewards.split(', '), weights=weights, k=1)[0]
     else:
         reward = choice(rewards.split(', '))
 
-    user_reward = CaseReward(club=club.id_name, user_id=user.user_id, text=reward)
+    user_reward = CaseReward(club=club.id_name, user_id=user.user_id, text=reward, case_cost=value)
     user_reward.save()
 
     bot.sendMessage(chat_id=user.telegram_id, text='Поздравляем, ваш приз: {}!'.format(reward),
