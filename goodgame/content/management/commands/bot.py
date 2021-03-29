@@ -53,15 +53,21 @@ def get_payment_keyboard():
 
 def case_payments_last(user_id):
     now_time = datetime.now()
-    last_lime = now_time - timedelta(hours=1)
-    recently = Mainlog.objects.filter(clientid=user_id, recorddtime__gte=last_lime, cashadd__gte=0)
+    last_lime = now_time - timedelta(minutes=5)
 
+    recently_pays = Mainlog.objects.filter(clientid=user_id, recorddtime__gte=last_lime, cashadd__gte=0)
     pay_sum = 0
-    if recently:
-        for payment in recently:
+    if recently_pays:
+        for payment in recently_pays:
             pay_sum += payment.cashadd
 
-    return pay_sum
+    recently_rewards = CaseReward.objects.filter(user_id=user_id, created_at__gte=last_lime)
+    reward_sum = 0
+    if recently_rewards:
+        for reward in recently_rewards:
+            reward_sum += reward.case_cost
+
+    return pay_sum - reward_sum
 
 
 def keyboard_callback_handler(update: Update, context: CallbackContext):
@@ -220,7 +226,15 @@ def case_show(user_id, club_id):
     user = FullInfoUser.objects.get(user_id=user_id)
     case_grades = CaseGrades.objects.filter(club=club.id_name)
 
-    if True:  # user.open_day != today.day
+    now_time = datetime.now()
+    last_lime = now_time - timedelta(minutes=5)
+
+    recently_open = CaseReward.objects.filter(
+        user_id=user_id,
+        created_at__gte=last_lime
+    )  # сколько кейсов открыл за последние сутки
+
+    if recently_open.count() < 3:
         pay_sum = case_payments_last(user.user_id)  # чек за последние сутки
         min_sum = case_grades.order_by('cost')[0].cost  # самый дешевый кейс
 
@@ -246,10 +260,11 @@ def case_show(user_id, club_id):
                 text='За последние 24 часа {}₽\n\nОткрой свой подарок  😉'.format(pay_sum),
                 reply_markup=keyboard
             )
-    # else:
-    #     query.message.edit_text(
-    #         text='Ты уже получил сегодня подарки\n\nВозвращайся завтра  😴',
-    #         reply_markup=get_back_keyboard())
+    else:
+        bot.sendMessage(
+            chat_id=user.telegram_id,
+            text='Ты уже получил сегодня подарки\n\nВозвращайся завтра  😴',
+            reply_markup=case_back())
 
 
 def case_open(user_id, club_id, value):
