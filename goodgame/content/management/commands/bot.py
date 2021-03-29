@@ -336,7 +336,6 @@ def case_my_reward(user_id, club_id):
         for reward in user_rewards:  # собираем сообщение с наградами
             reward_message += '\n• ' + reward.text
 
-    if user_rewards:
         bot.sendMessage(
             chat_id=user.telegram_id,
             text=reward_message,
