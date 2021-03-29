@@ -19,7 +19,7 @@ class ClubInfoAdmin(admin.ModelAdmin):
 
 @admin.register(CaseBody)
 class CaseBodyAdmin(admin.ModelAdmin):
-    list_display = ('club', 'date_start', 'date_end')
+    list_display = ('club', 'limit', 'date_start', 'date_end')
     list_display_links = ('club',)
     form = CaseBodyForm
 

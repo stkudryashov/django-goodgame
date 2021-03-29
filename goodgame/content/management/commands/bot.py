@@ -18,6 +18,9 @@ import telepot
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 
+time_delta = timedelta(minutes=1)
+
+
 def get_or_create_profile(f):
     def inner(update=None, context=None, user_id=None, club_id=None):
         try:
@@ -41,7 +44,7 @@ def case_back():
     return keyboard
 
 
-def get_payment_keyboard():
+def case_payment():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='100₽', callback_data='m100'),
                                                       InlineKeyboardButton(text='250₽', callback_data='m250'),
                                                       InlineKeyboardButton(text='500₽', callback_data='m500')],
@@ -53,7 +56,7 @@ def get_payment_keyboard():
 
 def case_payments_last(user_id):
     now_time = datetime.now()
-    last_lime = now_time - timedelta(minutes=5)
+    last_lime = now_time - time_delta
 
     recently_pays = Mainlog.objects.filter(clientid=user_id, recorddtime__gte=last_lime, cashadd__gte=0)
     pay_sum = 0
@@ -70,7 +73,7 @@ def case_payments_last(user_id):
     return pay_sum - reward_sum
 
 
-def keyboard_callback_handler(update: Update, context: CallbackContext):
+def edit_messages(update: Update, context: CallbackContext):
     query = update.callback_query
     data = query.data
 
@@ -139,7 +142,7 @@ def keyboard_callback_handler(update: Update, context: CallbackContext):
             bot.sendMessage(
                 chat_id=user.telegram_id,
                 text=f'На какую сумму пополнение?',
-                reply_markup=get_payment_keyboard()
+                reply_markup=case_payment()
             )
     elif 'CaseOpen' in button_press:
         try:
@@ -225,16 +228,17 @@ def case_show(user_id, club_id):
 
     user = FullInfoUser.objects.get(user_id=user_id)
     case_grades = CaseGrades.objects.filter(club=club.id_name)
+    case_body = CaseBody.objects.get(club=club.id_name)
 
     now_time = datetime.now()
-    last_lime = now_time - timedelta(minutes=5)
+    last_lime = now_time - time_delta
 
     recently_open = CaseReward.objects.filter(
         user_id=user_id,
         created_at__gte=last_lime
     )  # сколько кейсов открыл за последние сутки
 
-    if recently_open.count() < 3:
+    if recently_open.count() < case_body.limit:
         pay_sum = case_payments_last(user.user_id)  # чек за последние сутки
         min_sum = case_grades.order_by('cost')[0].cost  # самый дешевый кейс
 
@@ -331,7 +335,7 @@ class Command(BaseCommand):
         case_handler = CommandHandler('case', case_messages)
         updater.dispatcher.add_handler(case_handler)
 
-        buttons_handler = CallbackQueryHandler(callback=keyboard_callback_handler, pass_chat_data=False)
+        buttons_handler = CallbackQueryHandler(callback=edit_messages, pass_chat_data=False)
         updater.dispatcher.add_handler(buttons_handler)
 
         updater.start_polling()

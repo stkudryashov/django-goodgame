@@ -36,6 +36,7 @@ class CaseBody(models.Model):
     how_open = models.TextField(blank=True, verbose_name='как открыть коробку', null=True)
     about_text = models.TextField(blank=True, verbose_name='о кейсах', null=True)
     message_text = models.TextField(blank=True, verbose_name='сообщение', null=True)
+    limit = models.PositiveIntegerField(blank=True, verbose_name='лимит кейсов в день', default=3)
     image = models.ImageField(blank=True, upload_to='images/cases/', verbose_name='изображение', null=True)
 
     def __str__(self):
