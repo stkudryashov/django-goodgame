@@ -31,7 +31,8 @@ def get_or_create_profile(f):
                 user_club='goodgame1',
                 defaults={'nickname': update.message.from_user.name}
             )
-            f(p.pk, p.user_club)
+            club = ClubInfo.objects.get(id_name=p.user_club)
+            f(p.pk, club.pk)
         except AttributeError:
             f(user_id, club_id)
 
@@ -107,21 +108,21 @@ def edit_messages(update: Update, context: CallbackContext):
         except telepot.exception.TelegramError:
             pass
         finally:
-            case_show(user.user_id, club.id)
+            case_show(user.id, club.id)
     elif 'CaseAbout' in button_press:
         try:
             bot.deleteMessage(edit_message)
         except telepot.exception.TelegramError:
             pass
         finally:
-            case_about(user.telegram_id, club.id)
+            case_about(user.id, club.id)
     elif 'CaseHowOpen' in button_press:
         try:
             bot.deleteMessage(edit_message)
         except telepot.exception.TelegramError:
             pass
         finally:
-            case_how_open(user.telegram_id, club.id)
+            case_how_open(user.id, club.id)
     elif 'CaseBack' in button_press:
         try:
             bot.deleteMessage(edit_message)
@@ -131,7 +132,7 @@ def edit_messages(update: Update, context: CallbackContext):
             # убрать именованные аргументы, оставить только значения, как в комменте ниже
             # case_messages(user.id, club.id_name)
             # костыль, чтобы у меня все работало
-            case_messages(user_id=user.id, club_id=club.id_name)
+            case_messages(user_id=user.id, club_id=club.id)
     elif 'CasePayment' in button_press:
         try:
             bot.deleteMessage(edit_message)
@@ -150,14 +151,14 @@ def edit_messages(update: Update, context: CallbackContext):
             pass
         finally:
             value = button_press.split(' ')[1]
-            case_open(user.user_id, club.id, value)
+            case_open(user.id, club.id, value)
     elif 'CaseMyRewards' in button_press:
         try:
             bot.deleteMessage(edit_message)
         except telepot.exception.TelegramError:
             pass
         finally:
-            case_my_reward(user.user_id, club.id)
+            case_my_reward(user.id, club.id)
     elif 'CaseReward' in button_press:
         try:
             bot.deleteMessage(edit_message)
@@ -165,12 +166,12 @@ def edit_messages(update: Update, context: CallbackContext):
             pass
         finally:
             reward_id = button_press.split(' ')[1]
-            case_open_reward(user.user_id, club.id, reward_id)
+            case_open_reward(user.id, club.id, reward_id)
 
 
 @get_or_create_profile
 def case_messages(user_id, club_id):
-    club = ClubInfo.objects.get(id_name=club_id)
+    club = ClubInfo.objects.get(id=club_id)
     user = FullInfoUser.objects.get(id=user_id)
 
     bot = telepot.Bot(club.telegram_token)
@@ -201,29 +202,33 @@ def case_messages(user_id, club_id):
         bot.sendMessage(chat_id=user.telegram_id, text='Данная акция сейчас не активна')
 
 
-def case_about(telegram_id, club_id):
+def case_about(user_id, club_id):
     club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
+
+    user = FullInfoUser.objects.get(id=user_id)
 
     about_text = CaseBody.objects.get(club=club.id_name, date_start__lte=datetime.now(),
                                       date_end__gte=datetime.now()).about_text
-    bot.sendMessage(chat_id=telegram_id, text=about_text, reply_markup=case_back())
+    bot.sendMessage(chat_id=user.telegram_id, text=about_text, reply_markup=case_back())
 
 
-def case_how_open(telegram_id, club_id):
+def case_how_open(user_id, club_id):
     club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
 
+    user = FullInfoUser.objects.get(id=user_id)
+
     how_open = CaseBody.objects.get(club=club.id_name, date_start__lte=datetime.now(),
                                     date_end__gte=datetime.now()).how_open
-    bot.sendMessage(chat_id=telegram_id, text=how_open, reply_markup=case_back())
+    bot.sendMessage(chat_id=user.telegram_id, text=how_open, reply_markup=case_back())
 
 
 def case_show(user_id, club_id):
     club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
 
-    user = FullInfoUser.objects.get(user_id=user_id)
+    user = FullInfoUser.objects.get(id=user_id)
     case_grades = CaseGrades.objects.filter(club=club.id_name)
     case_body = CaseBody.objects.get(club=club.id_name)
 
@@ -272,7 +277,7 @@ def case_open(user_id, club_id, value):
     club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
 
-    user = FullInfoUser.objects.get(user_id=user_id)
+    user = FullInfoUser.objects.get(id=user_id)
 
     rewards = CaseGrades.objects.get(club=club.id_name, cost=value).rewards
     weights = CaseGrades.objects.get(club=club.id_name, cost=value).weights
@@ -299,7 +304,7 @@ def case_my_reward(user_id, club_id):
     club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
 
-    user = FullInfoUser.objects.get(user_id=user_id)
+    user = FullInfoUser.objects.get(id=user_id)
 
     user_rewards = CaseReward.objects.filter(club=club.id_name, user_id=user_id, is_received=False)
 
@@ -333,7 +338,7 @@ def case_open_reward(user_id, club_id, reward_id):
     club = ClubInfo.objects.get(id=club_id)
     bot = telepot.Bot(club.telegram_token)
 
-    user = FullInfoUser.objects.get(user_id=user_id)
+    user = FullInfoUser.objects.get(id=user_id)
 
     reward = CaseReward.objects.get(id=reward_id)
 
