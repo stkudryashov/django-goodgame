@@ -81,7 +81,6 @@ def edit_messages(update: Update, context: CallbackContext):
     edit_message = (query.message.chat_id, query.message.message_id)
 
     user = FullInfoUser.objects.get(telegram_id=query.message.chat_id)
-    today = datetime.today()
 
     club = ClubInfo.objects.get(id_name=user.user_club)
     bot = telepot.Bot(club.telegram_token)
@@ -159,16 +158,14 @@ def edit_messages(update: Update, context: CallbackContext):
             pass
         finally:
             case_my_reward(user.user_id, club.id)
-
-    # elif data[0:2] == 're':
-    #     del_pk = data[2:]
-    #     reward = Reward.objects.get(pk=int(del_pk))
-    #     reward.is_received = True
-    #     reward.save()
-    #     query.edit_message_text(
-    #         text=f'Вы получили свой подарок:\n\n✨  {reward.text}  ✨',
-    #         reply_markup=case_back()
-    #     )
+    elif 'CaseReward' in button_press:
+        try:
+            bot.deleteMessage(edit_message)
+        except telepot.exception.TelegramError:
+            pass
+        finally:
+            reward_id = button_press.split(' ')[1]
+            case_open_reward(user.user_id, club.id, reward_id)
 
 
 @get_or_create_profile
@@ -307,19 +304,46 @@ def case_my_reward(user_id, club_id):
     user_rewards = CaseReward.objects.filter(club=club.id_name, user_id=user_id, is_received=False)
 
     keyboard = []
-    for reward in user_rewards:  # собираем клавиатуру из доступных кейсов
-        keyboard.append([InlineKeyboardButton(
-            text=reward.text,
-            callback_data='CaseReward {}'.format(reward.id))]
-        )
+
+    if user_rewards:
+        for reward in user_rewards:  # собираем клавиатуру из доступных кейсов
+            keyboard.append([InlineKeyboardButton(
+                text=reward.text,
+                callback_data='CaseReward {}'.format(reward.id))]
+            )
 
     keyboard.append([InlineKeyboardButton(text='🔙  Назад  🔙', callback_data='CaseBack')])
     keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard)
 
+    if user_rewards:
+        bot.sendMessage(
+            chat_id=user.telegram_id,
+            text='Открывай награды только при администраторе!\n\nДоступные награды:',
+            reply_markup=keyboard
+        )
+    else:
+        bot.sendMessage(
+            chat_id=user.telegram_id,
+            text='У вас пока нет наград  😢',
+            reply_markup=keyboard
+        )
+
+
+def case_open_reward(user_id, club_id, reward_id):
+    club = ClubInfo.objects.get(id=club_id)
+    bot = telepot.Bot(club.telegram_token)
+
+    user = FullInfoUser.objects.get(user_id=user_id)
+
+    reward = CaseReward.objects.get(id=reward_id)
+
+    reward.is_received = True
+    reward.save()
+
     bot.sendMessage(
         chat_id=user.telegram_id,
-        text='Доступные награды: ',
-        reply_markup=keyboard
+        text='Вы получили свой подарок:\n\n✨  {}  ✨'.format(reward.text),
+        reply_markup=case_back()
     )
 
 

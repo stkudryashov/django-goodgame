@@ -35,6 +35,8 @@ class CaseGradesAdmin(admin.ModelAdmin):
 class CaseRewardAdmin(admin.ModelAdmin):
     list_display = ('club', 'user_id', 'text', 'case_cost', 'created_at', 'is_received')
     list_display_links = ('club', 'user_id')
+    list_editable = ('is_received',)
+    list_filter = ('is_received',)
     form = CaseRewardForm
 
 
