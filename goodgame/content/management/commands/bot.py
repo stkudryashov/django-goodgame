@@ -86,7 +86,7 @@ def case_payments_last(user_id):
         for reward in recently_rewards:
             reward_sum += reward.case_cost
 
-    return pay_sum - reward_sum
+    return pay_sum, pay_sum - reward_sum
 
 
 def edit_messages(update: Update, context: CallbackContext):
@@ -259,13 +259,15 @@ def case_show(user_id, club_id):
     )  # сколько кейсов открыл за последние сутки
 
     if recently_open.count() < case_body.limit:
-        pay_sum = case_payments_last(user.user_id)  # чек за последние сутки
+        pay_sum, open_sum = case_payments_last(user.user_id)  # чек за последние сутки
         min_sum = case_grades.order_by('cost')[0].cost  # самый дешевый кейс
 
         if pay_sum < min_sum:  # если чек за последние сутки меньше, чем стоимость самого дешевого кейса
             bot.sendMessage(
                 chat_id=user.telegram_id,
-                text='За последние 24 часа {}₽\n\nНужно пополнится чтобы получить подарок  😢'.format(pay_sum),
+                text='За последние 24 часа {}₽\n'
+                     'Можешь открыть кейсов на {}₽\n'
+                     '\nНужно пополнится чтобы получить подарок  😢'.format(pay_sum, open_sum),
                 reply_markup=case_back())
         else:
             keyboard = []
@@ -281,7 +283,9 @@ def case_show(user_id, club_id):
 
             bot.sendMessage(
                 chat_id=user.telegram_id,
-                text='За последние 24 часа {}₽\n\nОткрой свой подарок  😉'.format(pay_sum),
+                text='За последние 24 часа {}₽\n'
+                     'Можешь открыть кейсов на {}₽\n'
+                     '\nОткрой свой подарок  😉'.format(pay_sum, open_sum),
                 reply_markup=keyboard
             )
     else:
