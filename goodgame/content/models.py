@@ -52,6 +52,7 @@ class CaseGrades(models.Model):
     cost = models.IntegerField(blank=True, verbose_name='цена кейса', null=True)
     text = models.TextField(blank=True, verbose_name='текст на кнопке', null=True)
     rewards = models.TextField(blank=True, verbose_name='призы через запятую с пробелом', null=True)
+    rewards_cost = models.TextField(blank=True, verbose_name='цены через запятую с пробелом', null=True)
     weights = models.TextField(blank=True, verbose_name='веса через запятую с пробелом', null=True)
 
     def __str__(self):
@@ -68,6 +69,7 @@ class CaseReward(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='время получения')
     text = models.CharField(blank=True, max_length=100, verbose_name='награда', null=True)
     case_cost = models.IntegerField(blank=True, verbose_name='из какого кейса', null=True)
+    reward_cost = models.IntegerField(blank=True, verbose_name='цена награды', null=True)
     is_received = models.BooleanField(default=False, verbose_name='получил')
 
     def __str__(self):

@@ -303,8 +303,10 @@ def case_open(user_id, club_id, value):
 
     if CaseBody.objects.filter(club=club.id_name, date_start__lte=datetime.now(),
                                date_end__gte=datetime.now()).count() == 1:
-        rewards = CaseGrades.objects.get(club=club.id_name, cost=value).rewards
-        weights = CaseGrades.objects.get(club=club.id_name, cost=value).weights
+        case = CaseGrades.objects.get(club=club.id_name, cost=value)
+
+        rewards = case.rewards
+        weights = case.weights
 
         if weights:
             try:
@@ -317,7 +319,10 @@ def case_open(user_id, club_id, value):
         else:
             reward = choice(rewards.split(', '))
 
-        user_reward = CaseReward(club=club.id_name, user_id=user.user_id, text=reward, case_cost=value)
+        cost = case.rewards_cost.split(', ')[rewards.split(', ').index(reward)]
+
+        user_reward = CaseReward(club=club.id_name, user_id=user.user_id, text=reward,
+                                 case_cost=value, reward_cost=cost)
         user_reward.save()
 
         bot.sendMessage(chat_id=user.telegram_id, text='Поздравляем, ваш приз: {}!'.format(reward),

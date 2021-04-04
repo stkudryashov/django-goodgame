@@ -33,7 +33,7 @@ class CaseGradesAdmin(admin.ModelAdmin):
 
 @admin.register(CaseReward)
 class CaseRewardAdmin(admin.ModelAdmin):
-    list_display = ('club', 'user_id', 'text', 'case_cost', 'created_at', 'is_received')
+    list_display = ('club', 'user_id', 'text', 'case_cost', 'reward_cost', 'created_at', 'is_received')
     list_display_links = ('club', 'user_id')
     list_editable = ('is_received',)
     list_filter = ('is_received',)

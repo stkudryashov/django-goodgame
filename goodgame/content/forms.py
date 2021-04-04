@@ -23,10 +23,10 @@ class CaseBodyForm(forms.ModelForm):
 class CaseGradesForm(forms.ModelForm):
     class Meta:
         model = CaseGrades
-        fields = ('club', 'cost', 'text', 'rewards', 'weights')
+        fields = ('club', 'cost', 'text', 'rewards', 'rewards_cost', 'weights')
 
 
 class CaseRewardForm(forms.ModelForm):
     class Meta:
         model = CaseReward
-        fields = ('club', 'user_id', 'text', 'case_cost')
+        fields = ('club', 'user_id', 'text', 'case_cost', 'reward_cost')
